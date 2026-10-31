@@ -216,6 +216,16 @@ Xcursor settings, GTK apps ask XSETTINGS (and fall back to
 uses whatever the server has. The session now runs xsettingsd with only the
 cursor in it, and the wallpaper sets the root cursor.
 
+That still wasn't all of it. In Okular the browse tool and links showed a
+hand from a different theme. Qt asks for names like `openhand`,
+`closedhand` and `pointing_hand`, and when a theme doesn't have a name,
+libXcursor looks in the `default` theme (`~/.icons/default`) instead of
+falling back to the arrow. So the generator now covers every name Qt uses
+(the old hash names too) plus every name found in the cursor themes you have
+installed. `blank` and `none` are left out on purpose, since those are meant
+to be invisible. If you install a new cursor theme later, run
+`python3 cursor/gerar-cursor.py ~/.local/share/icons` again.
+
 ## Limitations
 
 The scale is fixed at 2x (16 px characters) for borders, titles and the status
