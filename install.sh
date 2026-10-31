@@ -1,0 +1,59 @@
+#!/bin/sh
+# templeos-session: check dependencies and install into $HOME
+#
+#   ./install.sh           check, then install
+#   ./install.sh --check   only check dependencies
+#
+# Nothing outside $HOME is touched. Registering the session with the login
+# manager needs root, so that last step is printed for you to run.
+D=$(cd "$(dirname "$0")" && pwd)
+
+falta=0
+precisa() {  # precisa <comando> <pacote no Arch>
+  command -v "$1" >/dev/null 2>&1 || { echo "  missing: $1 ($2)"; falta=1; }
+}
+opcional() {  # opcional <comando> <pacote no Arch> <para que serve>
+  command -v "$1" >/dev/null 2>&1 || echo "  optional: $1 ($2) - $3"
+}
+modulo() {  # modulo <modulo python> <pacote no Arch>
+  python3 -c "import $1" 2>/dev/null || { echo "  missing: python module $1 ($2)"; falta=1; }
+}
+
+echo "checking dependencies (Arch package names in parentheses)"
+precisa xfwm4 xfwm4
+precisa dbus-run-session dbus
+precisa python3 python
+precisa kitty kitty
+precisa zsh zsh
+precisa xdotool xdotool
+precisa xrdb xorg-xrdb
+precisa xcursorgen xorg-xcursorgen
+modulo gi python-gobject
+modulo cairo python-cairo
+modulo PIL python-pillow
+python3 -c "import gi; gi.require_version('Gtk', '3.0')" 2>/dev/null || { echo "  missing: GTK 3 (gtk3)"; falta=1; }
+opcional fastfetch fastfetch "system info in the first terminal"
+opcional xsettingsd xsettingsd "same cursor in GTK apps"
+opcional setxkbmap xorg-setxkbmap "XKB_LAYOUT in sessao.conf"
+opcional paplay libpulse "God Song plays the hymn"
+opcional wpctl wireplumber "Ctrl+Alt+M mute"
+opcional less less "Ctrl+Alt+B Bible"
+opcional qemu-system-x86_64 qemu-desktop "the TempleOS logo in the menu boots the real thing"
+
+if [ "$falta" = 1 ]; then
+  echo "install the missing packages above and run this again"
+  exit 1
+fi
+echo "all required dependencies found"
+[ "$1" = --check ] && exit 0
+
+sh "$D/sessao/instalar.sh" || exit 1
+cat <<EOF
+
+Done. Last step, register the session with your login manager (needs root):
+
+  sudo install -m644 "$D/build/templeos.desktop" /usr/share/xsessions/
+
+Then log out and pick "TempleOS" in the session list.
+Your settings live in ~/.config/templeos/ (sessao.conf, menu.json, programas.json).
+EOF

@@ -1,0 +1,16 @@
+{
+  "_comment": "Program shortcuts (outside the original TempleOS set). Key: modifiers Ctrl, Alt, Shift, Super joined by + and an X keysym name (K, Return, F2, Print, Insert, space...). Value: shell command; $TERM is the session terminal. Edit the copy in ~/.config/templeos/, it wins over this one.",
+  "Super+K": "$TERM",
+  "Super+Return": "$TERM",
+  "Super+E": "thunar",
+  "Ctrl+Alt+F": "thunar",
+  "Super+R": "xfce4-appfinder -c",
+  "Super+space": "xfce4-appfinder",
+  "Alt+F2": "xfce4-appfinder --collapsed",
+  "Insert": "xfce4-screenshooter",
+  "Alt+Print": "xfce4-screenshooter -w",
+  "Shift+Print": "xfce4-screenshooter -r",
+  "Ctrl+Shift+Escape": "xfce4-taskmanager",
+  "Ctrl+Alt+Escape": "xkill",
+  "Ctrl+Alt+L": "dm-tool lock"
+}

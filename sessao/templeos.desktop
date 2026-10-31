@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=TempleOS
+Comment=TempleOS-style session (xfwm4 with its own wallpaper, menu and shortcuts)
+Exec=@RAIZ@/sessao/sessao.sh
+TryExec=xfwm4
+Type=Application
+DesktopNames=TempleOS

@@ -1,0 +1,18 @@
+# zsh da sessao TempleOS: carrega o ~/.zshrc de sempre e so troca o prompt
+# pelo do original ("C:/Home>"). O kitty da sessao aponta ZDOTDIR para ca.
+ZDOTDIR=$HOME
+[[ -f $HOME/.zshrc ]] && source $HOME/.zshrc
+setopt PROMPT_SUBST
+templeos_dir() {
+  local p=$PWD
+  [[ $p == $HOME* ]] && p=/Home${p#$HOME}
+  print -r -- "C:$p"
+}
+PROMPT='%F{4}$(templeos_dir)>%f'   # azul do TempleOS; o resto do texto e preto
+RPROMPT=''
+
+# Primeiro terminal da sessao: o cabecalho, como a tela de boas-vindas do original.
+if [[ -n $TEMPLEOS_BOAS_VINDAS ]]; then
+  unset TEMPLEOS_BOAS_VINDAS
+  fastfetch -c "$TEMPLEOS_CFG/fastfetch.jsonc"
+fi

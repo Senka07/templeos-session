@@ -1,0 +1,29 @@
+// fastfetch da sessao TempleOS (so no primeiro terminal). Logo em cima: o
+// terminal tem 50 colunas e nao cabem logo e dados lado a lado. O logo e o sprite
+// de Demo/AcctExample/TOS/TOSTheme.HC, centrado em 324x48: exatamente 27x4
+// celulas de 12px, entao o kitty mostra sem reescalar. @RAIZ@ e trocado pelo instalar.sh.
+{
+  "logo": {
+    "type": "kitty-direct",
+    "source": "@RAIZ@/dados/logo-fastfetch.png",
+    "width": 27,
+    "height": 4,
+    "position": "top",
+    "padding": { "top": 1, "left": 1 }
+  },
+  "display": {
+    "separator": " ",
+    "color": { "keys": "red", "title": "blue", "output": "blue" }
+  },
+  "modules": [
+    { "type": "custom", "format": "Public Domain Operating System" },
+    "break",
+    { "type": "os", "key": "OS" },
+    { "type": "kernel", "key": "Kernel" },
+    { "type": "uptime", "key": "Uptime" },
+    { "type": "packages", "key": "Pkgs" },
+    { "type": "cpu", "key": "CPU" },
+    { "type": "memory", "key": "Mem" },
+    { "type": "disk", "key": "Disk", "folders": "/" }
+  ]
+}

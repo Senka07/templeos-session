@@ -1,0 +1,26 @@
+{
+  "_comment": "PersonalMenu. sprite: file in dados/menu. cmd: shell command ($TERM is the session terminal); entries whose program is not installed are hidden. acao: hino (God Song) | passagem (God Passage) | ascii | biblia (Bible) | sair (Log Out). Edit the copy in ~/.config/templeos/.",
+  "cabecalho": {"sprite": "TempleOS.png", "cmd": "qemu-system-x86_64 -accel kvm -accel tcg -m 1024 -smp 2 -cdrom \"$TEMPLEOS_RAIZ/iso/TempleOS.ISO\" -boot d -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -name TempleOS"},
+  "icones": [
+    {"sprite": "Term.png",      "rotulo": "Term",      "cmd": "$TERM"},
+    {"sprite": "Titanium.png",  "rotulo": "Firefox",   "cmd": "firefox"},
+    {"sprite": "Wenceslas.png", "rotulo": "Thunar",    "cmd": "thunar"},
+    {"sprite": "Vocab.png",     "rotulo": "Editor",    "cmd": "mousepad"},
+    {"sprite": "FlatTops.png",  "rotulo": "Steam",     "cmd": "steam"},
+    {"sprite": "Talons.png",    "rotulo": "Discord",   "cmd": "discord"},
+    {"sprite": "Digits.png",    "rotulo": "Krita",     "cmd": "krita"},
+    {"sprite": "Budget.png",    "rotulo": "Calc",      "cmd": "libreoffice --calc"},
+    {"sprite": "JukeBox.png",   "rotulo": "Audacious", "cmd": "audacious"},
+    {"sprite": "XCaliber.png",  "rotulo": "VLC",       "cmd": "vlc"},
+    {"sprite": "BigGuns.png",   "rotulo": "OBS",       "cmd": "obs"},
+    {"sprite": "Logic.png",     "rotulo": "btop",      "cmd": "$TERM btop"},
+    {"sprite": "Psalmody.png",  "rotulo": "Psalmody",  "acao": "hino"}
+  ],
+  "links": [
+    {"rotulo": "Bible",       "acao": "biblia"},
+    {"rotulo": "God Passage", "acao": "passagem"},
+    {"rotulo": "God Song",    "acao": "hino"},
+    {"rotulo": "ASCII",       "acao": "ascii"},
+    {"rotulo": "Log Out",     "acao": "sair"}
+  ]
+}

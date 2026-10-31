@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Canal xfwm4 da sessao TempleOS (lido pelo xfconfd proprio da sessao). -->
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="TempleOS"/>
+    <property name="title_font" type="string" value="Temple Std 12"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="button_layout" type="string" value="O|C"/>
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="show_frame_shadow" type="bool" value="false"/>
+    <property name="show_popup_shadow" type="bool" value="false"/>
+    <!-- Areas de trabalho com nome de unidade do TempleOS. Trocar: Ctrl+F1..F4,
+         Ctrl+Alt+setas (padroes do xfwm4) ou clicando na letra da linha de status. -->
+    <property name="workspace_count" type="int" value="4"/>
+    <property name="workspace_names" type="array">
+      <value type="string" value="C:"/>
+      <value type="string" value="D:"/>
+      <value type="string" value="E:"/>
+      <value type="string" value="F:"/>
+    </property>
+    <property name="borderless_maximize" type="bool" value="false"/>
+    <property name="titleless_maximize" type="bool" value="false"/>
+    <property name="placement_mode" type="string" value="center"/>
+    <property name="placement_ratio" type="int" value="100"/>
+    <property name="snap_to_border" type="bool" value="true"/>
+    <property name="snap_to_windows" type="bool" value="true"/>
+    <property name="snap_width" type="int" value="16"/>
+    <property name="tile_on_move" type="bool" value="true"/>
+    <property name="wrap_windows" type="bool" value="false"/>
+    <property name="wrap_workspaces" type="bool" value="false"/>
+    <property name="cycle_preview" type="bool" value="false"/>
+    <property name="cycle_tabwin_mode" type="int" value="1"/>
+    <property name="cycle_draw_frame" type="bool" value="false"/>
+    <property name="double_click_action" type="string" value="maximize"/>
+    <property name="mousewheel_rollup" type="bool" value="false"/>
+    <property name="click_to_focus" type="bool" value="true"/>
+    <property name="raise_on_click" type="bool" value="true"/>
+    <property name="box_move" type="bool" value="false"/>
+    <property name="box_resize" type="bool" value="false"/>
+  </property>
+</channel>
