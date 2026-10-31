@@ -78,8 +78,11 @@ def captura():
     cb.store()
 
 def biblia():
-    # +297: comeca no Genesis, depois do cabecalho do Project Gutenberg
-    roda("$TERM -T Bible less +297 '%s'" % os.path.join(RAIZ, 'dados', 'Bible.TXT'))
+    # +292: comeca no Velho Testamento, depois do cabecalho do Project Gutenberg.
+    # O texto vem quebrado em ~70 colunas e o terminal tem menos: o fmt junta os
+    # versiculos de novo na largura da janela, senao o less corta as palavras.
+    roda("$TERM -T Bible sh -c 'tail -n +292 \"$1\" | fmt -w $(tput cols) | less' sh '%s'"
+         % os.path.join(RAIZ, 'dados', 'Bible.TXT'))
 
 def menu_da_janela():
     xdotool('key', '--clearmodifiers', 'alt+space')  # popup_menu_key padrao do xfwm4
