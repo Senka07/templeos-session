@@ -168,6 +168,16 @@ is the directory itself. Most files inside are compressed with his LZW
 bits the table only recycles leaf entries. Without that the decoder goes into
 an infinite loop, which I found out on `FileMgr.HC`.
 
+There was a second one in the same decoder, and it took me much longer to
+notice because nothing crashed. I marked the end of a code chain with 4095,
+which is also a valid code. Once the table wrapped around and entry 4095
+became a prefix, chains stopped early and letters went missing: Acts had
+"the chi f priests" and "that ht they caught nothing". The original stops at
+`code<min_table_entry`, and now mine does too. The check that would have
+caught it right away: every `.Z` file stores its expanded size, and the Bible
+was coming out 1153 bytes short. The line numbers in `Adam/God/GodBible.HC`
+now land exactly on each book's title.
+
 XGrabKey grabs the whole keyboard while the grabbed key is held down. F7 was
 typing God's word without its first letter, because that letter came to my
 process instead of the window. Now the word is typed when F7 is released. The

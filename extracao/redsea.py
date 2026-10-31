@@ -56,7 +56,9 @@ def expand(buf):
             stack.append(last_ch); t = last
         else:
             t = code
-        while base[t] != MAXE:
+        # o fim da cadeia e code<min_table_entry, como no ArcExpandBuf; testar
+        # base!=MAXE parava cedo quando a entrada 4095 era prefixo de outra
+        while t >= min_entry:
             stack.append(ch[t]); t = base[t]
         last_ch = ch[t]
         base[st['cur']] = last; ch[st['cur']] = last_ch
