@@ -45,6 +45,25 @@ as a square wave.
 There are four workspaces named C:, D:, E: and F: in the status line. TempleOS
 doesn't have workspaces, but I needed them.
 
+## Screenshots
+
+All of these are 1280x1024, taken in the Xephyr test session described below.
+
+![F7 typing God's words into the terminal, and a God Passage](docs/god.png)
+
+I typed `echo God says:` and pressed F7 six times, then Shift+F7 for a
+passage, which picks the line the same way `GodBiblePassage` does.
+
+![The ASCII table and the God Song dialog](docs/ascii-god-song.png)
+
+Ctrl+Alt+A and F6. Both windows are drawn glyph by glyph from the font, and
+the `F6` in the top right corner is the last key indicator.
+
+![Workspace D: with htop and the Bible](docs/workspace.png)
+
+Workspace D: with htop and Ctrl+Alt+B. The terminal is plain kitty, so
+anything that runs in a terminal gets the font and the palette.
+
 ## Shortcuts
 
 These are the TempleOS ones. In the original F6, F7 and Ctrl+M belong to the
