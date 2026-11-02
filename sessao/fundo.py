@@ -20,7 +20,7 @@ Correspondencias com o original (as colunas e os formatos sao os mesmos):
 Variaveis: TEMPLEOS_TERM (comando do terminal, padrao kitty),
 TEMPLEOS_TECLA=0 para nao mostrar a ultima tecla no topo.
 """
-import ctypes, glob, os, subprocess, sys, time
+import ctypes, glob, os, subprocess, sys, time, warnings
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
@@ -363,15 +363,34 @@ def main():
     fundo.show_all()
     topo.show_all()
 
+    tela = Gdk.Screen.get_default()
+    pendente = []
+
+    def aplica():
+        # Tamanho pelo XScreen (o RandR ja atualizou), nao pela janela raiz do
+        # GDK: ela so muda com o ConfigureNotify da raiz, que chega depois do
+        # RRScreenChangeNotify que dispara o size-changed -- lida ali, ainda
+        # tinha o tamanho velho e o fundo ficava em 1920x1080 numa tela 1280x1024.
+        with warnings.catch_warnings():  # get_width/height: obsoletos, mas sao o XScreen
+            warnings.simplefilter('ignore')
+            largura, altura = tela.get_width(), tela.get_height()
+        if (largura, altura) != (fundo.get_size()[0], fundo.altura):
+            fundo.ajusta(largura, altura)
+        if largura != topo.largura:
+            topo.ajusta(largura)
+        pendente.clear()
+        return False
+
     def mudou(*_):
         # xrandr, outro monitor, troca de resolucao: o X avisa e as duas
-        # janelas voltam a cobrir a tela (a moldura e o resto nao dependem disso)
-        r = Gdk.get_default_root_window()
-        fundo.ajusta(r.get_width(), r.get_height())
-        topo.ajusta(r.get_width())
-    tela = Gdk.Screen.get_default()
+        # janelas voltam a cobrir a tela (a moldura e o resto nao dependem disso).
+        # Espera os eventos da troca assentarem e le uma vez so.
+        if not pendente:
+            pendente.append(GLib.timeout_add(300, aplica))
     tela.connect('size-changed', mudou)
     tela.connect('monitors-changed', mudou)
+    # e uma conferencia lenta, para o caso de algum aviso se perder
+    GLib.timeout_add_seconds(5, lambda: (mudou(), True)[1])
     Gtk.main()
 
 if __name__ == '__main__':

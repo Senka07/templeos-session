@@ -6,9 +6,15 @@
     <property name="title_font" type="string" value="Temple Std 12"/>
     <property name="title_alignment" type="string" value="center"/>
     <property name="button_layout" type="string" value="O|C"/>
-    <property name="use_compositing" type="bool" value="false"/>
+    <!-- Compositor ligado: sem ele a Steam (CEF, NVIDIA) abre a janela mas nao
+         pinta: fica a imagem velha do que estava atras e parece que a tela
+         congelou. Sombras e zoom desligados para o visual e as teclas ficarem
+         iguais a sem compositor. -->
+    <property name="use_compositing" type="bool" value="true"/>
     <property name="show_frame_shadow" type="bool" value="false"/>
     <property name="show_popup_shadow" type="bool" value="false"/>
+    <property name="show_dock_shadow" type="bool" value="false"/>
+    <property name="zoom_desktop" type="bool" value="false"/>
     <!-- Areas de trabalho com nome de unidade do TempleOS. Trocar: Ctrl+F1..F4,
          Ctrl+Alt+setas (padroes do xfwm4) ou clicando na letra da linha de status. -->
     <property name="workspace_count" type="int" value="4"/>

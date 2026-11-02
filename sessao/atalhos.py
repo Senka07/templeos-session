@@ -24,7 +24,7 @@ Windows+Shift+1..4 (leva a janela) e Windows+W (fecha). Ficam aqui e nao no
 xfwm4 porque o Windows sozinho ja e capturado por este processo: enquanto ele
 esta apertado o teclado inteiro vem para ca, e o xfwm4 nao veria Windows+1.
 """
-import ctypes, json, os, shlex, shutil, signal, subprocess, sys
+import ctypes, json, os, shlex, shutil, signal, subprocess, sys, time, warnings
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
@@ -306,26 +306,76 @@ def arranjo_inicial(menu):
     escondido (Ctrl+M). O terminal desce ate 3/4 da tela; o quarto de baixo
     fica para o monitor de tarefas do fundo.
     """
-    r = Gdk.get_default_root_window()
-    w, h = r.get_width(), r.get_height()
-    lado = w - MENU_LARGURA >= 40 * CELULA_TERM + 2 * C
-    x = MENU_LARGURA if lado else 0
-    cols = max(20, (w - x - 2 * C) // CELULA_TERM)
-    linhas = max(10, (h * 3 // 4 - 3 * C) // CELULA_TERM)
-    if lado and os.environ.get('TEMPLEOS_MENU_INICIAL', '1') != '0':
+    lado, x, cols, linhas = geometria(*tamanho_tela())
+    com_menu = os.environ.get('TEMPLEOS_MENU_INICIAL', '1') != '0'
+    if lado and com_menu:
         menu.show_all()
     env = ambiente()
     env['TEMPLEOS_BOAS_VINDAS'] = '1'  # o zshrc mostra o fastfetch so neste
     cmd = ('%s --position %dx%d -o initial_window_width=%dc -o initial_window_height=%dc'
            % (TERMINAL, x + C, 2 * C, cols, linhas))
-    subprocess.Popen(cmd, shell=True, start_new_session=True, env=env)
+    p = subprocess.Popen(cmd, shell=True, start_new_session=True, env=env)
+    return dict(pid=p.pid, cols=cols, linhas=linhas, com_menu=com_menu, escondido=not lado)
+
+def tamanho_tela():
+    # O XScreen, que o RandR atualiza na hora; a janela raiz do GDK so muda
+    # depois (ver o mesmo comentario no fundo.py)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        t = Gdk.Screen.get_default()
+        return t.get_width(), t.get_height()
+
+def geometria(w, h):
+    lado = w - MENU_LARGURA >= 40 * CELULA_TERM + 2 * C
+    x = MENU_LARGURA if lado else 0
+    cols = max(20, (w - x - 2 * C) // CELULA_TERM)
+    linhas = max(10, (h * 3 // 4 - 3 * C) // CELULA_TERM)
+    return lado, x, cols, linhas
+
+REARRANJO_S = 90
+
+def segue_resolucao(menu, boot):
+    """A resolucao escolhida pode entrar uns segundos depois do login (o X sobe
+    na nativa do monitor e depois alguem troca). Nesse intervalo o arranjo do
+    boot e refeito para a tela nova; depois, janelas abertas ficam onde estao."""
+    tela, inicio, pendente = Gdk.Screen.get_default(), time.monotonic(), []
+
+    def aplica():
+        pendente.clear()
+        lado, x, cols, linhas = geometria(*tamanho_tela())
+        # so mexe no menu se foi o arranjo que o mostrou ou escondeu (um Esc
+        # do usuario nesse meio-tempo vale)
+        if boot['com_menu'] and not lado and menu.get_visible():
+            menu.hide()
+            boot['escondido'] = True
+        elif boot['com_menu'] and lado and boot['escondido']:
+            menu.show_all()
+            boot['escondido'] = False
+        j = next((j for j in x11.janelas_normais()
+                  if x11.propriedade(j, '_NET_WM_PID')[:1] == [boot['pid']]), 0)
+        if j:
+            g = GdkX11.X11Window.foreign_new_for_display(Gdk.Display.get_default(), j)
+            _, _, w, h = g.get_geometry()  # cliente, com o padding do kitty
+            w += (cols - boot['cols']) * CELULA_TERM
+            h += (linhas - boot['linhas']) * CELULA_TERM
+            # gravidade estatica (10): x,y sao do cliente, como o --position
+            flags = 10 | 0xF << 8 | 2 << 12
+            x11.mensagem_raiz(j, '_NET_MOVERESIZE_WINDOW', flags, x + C, 2 * C, w, h)
+            boot.update(cols=cols, linhas=linhas)
+        return False
+
+    def mudou(*_):
+        if time.monotonic() - inicio < REARRANJO_S and not pendente:
+            pendente.append(GLib.timeout_add(300, aplica))
+    tela.connect('size-changed', mudou)
+    tela.connect('monitors-changed', mudou)
 
 # ---------------------------------------------------------------- teclas
 def main():
     cfg = json.load(open(config('menu.json')))
     menu = PersonalMenu(cfg)
     if '--sem-arranjo' not in sys.argv:  # para reiniciar so os atalhos com a sessao no ar
-        arranjo_inicial(menu)
+        segue_resolucao(menu, arranjo_inicial(menu))
 
     C_A = x11.CTRL | x11.ALT
     ao_apertar = {

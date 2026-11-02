@@ -226,6 +226,26 @@ installed. `blank` and `none` are left out on purpose, since those are meant
 to be invisible. If you install a new cursor theme later, run
 `python3 cursor/gerar-cursor.py ~/.local/share/icons` again.
 
+Steam would start and then the screen looked frozen as soon as its window
+came up. It wasn't frozen. Without a compositor, Steam's web view on NVIDIA
+maps a full screen window and never paints it, so what you see is whatever
+was behind it a moment ago. The session now turns on xfwm4's own compositor,
+with shadows and zoom off, so nothing looks different. Steam picks how to
+draw when it starts, so if it was already open you have to quit and open it
+again.
+
+The wallpaper was supposed to follow resolution changes, and on my machine it
+didn't: the screen was 1280x1024 and the wallpaper was still 1920x1080, with
+the Term button and the bottom of the task monitor off screen. GTK sends
+`size-changed` when the RandR event arrives, but its root window only gets the
+new size from the `ConfigureNotify` that comes after, so reading the root
+window in the handler gave the old size. Now it reads the X screen size a bit
+later and checks again every few seconds. The same thing was hiding behind the
+boot layout: X starts at the monitor's native mode and my resolution is set a
+few seconds after login, so the first terminal was sized for the wrong screen.
+For the first 90 seconds after login a resolution change now redoes that
+layout too.
+
 ## Limitations
 
 The scale is fixed at 2x (16 px characters) for borders, titles and the status
