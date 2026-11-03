@@ -45,8 +45,12 @@ def ambiente():
     env['TEMPLEOS_RAIZ'] = RAIZ
     return env
 
+THUNAR = shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'thunar.sh'))
+
 def roda(cmd):
     cmd = cmd.replace('$TERM', TERMINAL)
+    if cmd == 'thunar' or cmd.startswith('thunar '):
+        cmd = 'sh ' + THUNAR + cmd[6:]  # com o tema TempleOS-Thunar
     subprocess.Popen(cmd, shell=True, start_new_session=True, env=ambiente())
 
 def xdotool(*args):

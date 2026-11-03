@@ -38,6 +38,8 @@ opcional setxkbmap xorg-setxkbmap "XKB_LAYOUT in sessao.conf"
 opcional paplay libpulse "God Song plays the hymn"
 opcional wpctl wireplumber "Ctrl+Alt+M mute"
 opcional less less "Ctrl+Alt+B Bible"
+opcional thunar thunar "Super+E file manager, with its own TempleOS theme"
+opcional gcc gcc "builds the module that themes Thunar"
 opcional qemu-system-x86_64 qemu-desktop "the TempleOS logo in the menu boots the real thing"
 
 if [ "$falta" = 1 ]; then

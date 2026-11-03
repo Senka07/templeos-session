@@ -17,7 +17,7 @@ done
 # o instalar.sh grava no HOME real): so o conteudo, e sem o que a sessao instala.
 ln -s "$HOME/.local/share/fonts" "$F/.local/share/fonts/pessoais"
 for p in "$HOME"/.local/share/icons/*; do
-  [ "${p##*/}" = TempleOS ] || ln -s "$p" "$F/.local/share/icons/"
+  case ${p##*/} in TempleOS|TempleOS-Thunar) ;; *) ln -s "$p" "$F/.local/share/icons/" ;; esac
 done
 sh "$D/instalar.sh" "$F" > "$T/instalar.log" 2>&1
 

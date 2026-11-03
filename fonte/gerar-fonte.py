@@ -33,6 +33,12 @@ def unicode_de(c):
         return c
     if c == 0x7f:
         return 0x2302
+    if c == 0xff:
+        # Na CP437 o 0xFF e o espaco sem quebra (U+00A0), mas no TempleOS e um
+        # quadrado cheio: o "1.7 MiB" do Thunar e o "10 kB" de outros apps
+        # saiam com um bloco no lugar do espaco. O U+00A0 ganha o glifo do
+        # espaco, logo abaixo.
+        return None
     if c >= 0x80:
         return ord(bytes([c]).decode('cp437'))
     return None
@@ -60,6 +66,7 @@ for c, v in enumerate(glifos):
             else:
                 x += 1
     nomes.append(nome); cmap[u] = nome; contornos[nome] = pen.glyph()
+cmap[0xa0] = 'uni0020'
 
 fb = FontBuilder(8 * PX, isTTF=True)
 fb.setupGlyphOrder(nomes)

@@ -44,6 +44,10 @@ for a in /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 \
   [ -x "$a" ] && { "$a" & break; }
 done
 
+# Thunar ja como daemon: toda janela dele (Windows+E, menu, "abrir pasta"
+# pedido por outro app via D-Bus) sai deste processo, que tem o tema TempleOS.
+command -v thunar >/dev/null && sh "$D/thunar.sh" --daemon &
+
 GTK_THEME=TempleOS python3 "$D/fundo.py" &
 # atalhos, PersonalMenu, Deus e o arranjo do boot (menu + primeiro terminal,
 # calculados pela resolucao da tela)

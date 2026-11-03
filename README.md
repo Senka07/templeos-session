@@ -42,6 +42,14 @@ types a word into whatever window is focused, Shift+F7 opens a Bible passage
 and F6 does the God Song dialog (Timer, Latch, OKAY) and then plays the hymn
 as a square wave.
 
+Thunar (Super+E) gets a theme of its own, modeled on the TempleOS file
+manager (`Adam/ABlkDev/FileMgr.HC`) and the DolDoc documents: white
+background, blue text, light blue lines, the selection drawn inverted, purple
+column headers, the 8x8 font at its real size and square corners. Single line
+borders mean normal and double lines mean focused, same as the windows. The
+icons are the Adwaita symbolic set recolored to the text blue. Only Thunar
+gets this. The programs it opens keep your normal theme.
+
 There are four workspaces named C:, D:, E: and F: in the status line. TempleOS
 doesn't have workspaces, but I needed them.
 
@@ -108,8 +116,9 @@ Required (Arch names): `xfwm4`, `dbus`, `python`, `python-gobject`,
 
 Optional: `fastfetch`, `xsettingsd` (keeps the cursor the same in GTK apps),
 `xorg-setxkbmap`, `libpulse` (for the God Song audio), `wireplumber` (mute),
-`polkit-gnome`, and `qemu-desktop` if you want the TempleOS logo in the menu
-to boot the real thing.
+`polkit-gnome`, `thunar` and `gcc` (to build the module that themes it), and
+`qemu-desktop` if you want the TempleOS logo in the menu to boot the real
+thing.
 
 ```sh
 git clone https://github.com/Senka07/templeos-session && cd templeos-session
@@ -124,8 +133,9 @@ screen through `dm-tool`, so on GDM or SDDM change that line in
 `programas.json`.
 
 `install.sh` only writes to paths that belong to the session:
-`~/.local/share/themes/TempleOS`, `~/.local/share/icons/TempleOS` (the cursor),
-`~/.local/share/fonts/TempleStd.ttf`,
+`~/.local/share/themes/TempleOS`, `~/.local/share/themes/TempleOS-Thunar`,
+`~/.local/share/icons/TempleOS` (the cursor),
+`~/.local/share/icons/TempleOS-Thunar`, `~/.local/share/fonts/TempleStd.ttf`,
 `~/.config/fontconfig/conf.d/60-templeos.conf` and `~/.config/templeos/`.
 The session also runs its own D-Bus with its own xfconf, so the xfwm4 settings
 of a normal XFCE session stay as they were.
@@ -155,6 +165,13 @@ label and a command. Programs that aren't installed are left out of the menu,
 so the default list is fine to keep even if you don't use half of it.
 
 `programas.json` is the program shortcuts, as `"Ctrl+Alt+F": "thunar"`.
+
+The Thunar font size is the `font:` line near the top of the CSS in
+`thunar/gerar-tema.py`. It's 8px, one font pixel per screen pixel; 16px also
+stays sharp, anything in between gets uneven strokes. After changing it run
+`python3 thunar/gerar-tema.py ~/.local/share/themes` and `thunar -q`, and the
+next Thunar window has it. Don't edit the generated `gtk.css`, the installer
+writes over it.
 
 The code is in Portuguese, both names and comments, because it's my first
 language. The file names map like this: `fundo.py` is the wallpaper,
@@ -246,6 +263,30 @@ few seconds after login, so the first terminal was sized for the wrong screen.
 For the first 90 seconds after login a resolution change now redoes that
 layout too.
 
+Theming only Thunar was harder than theming Thunar. With `GTK_THEME` it
+works, but every program Thunar opens inherits the variable, so your image
+viewer and text editor come up in TempleOS colors too. What I ended up with is
+`thunar/tema-app.c`, a tiny GTK module loaded through `GTK_MODULES`. It sets
+the theme and icon theme as settings inside the Thunar process, then removes
+itself and its variables from the environment before Thunar launches
+anything. The session starts `thunar --daemon` through `sessao/thunar.sh`, so
+every Thunar window, including the ones other apps ask for over D-Bus, comes
+from that one process.
+
+The blue icons had a catch. I expected GTK to go through the list of names
+for a file type and stop at the first one my theme has, so a generic
+`text-x-generic` would cover every text file. Thunar doesn't do that: it takes
+the first name that exists in any installed theme. Some app had put a
+colorful `text-plain` in hicolor, and `.txt` files came out with it. Now
+`thunar/gerar-icones.py` reads the shared-mime-info database and gives every
+type and alias its own name in the theme, pointing at the blue generic of its
+group.
+
+Thunar also showed "1.7 MiB" with a solid block in place of the space. Sizes
+are written with a non-breaking space (U+00A0), which is 0xFF in CP437, and
+0xFF in the TempleOS font is a filled square. The font now maps U+00A0 to the
+space glyph.
+
 ## Limitations
 
 The scale is fixed at 2x (16 px characters) for borders, titles and the status
@@ -257,6 +298,9 @@ line, and the terminal is at 12 px. That's right for 1280x1024 and fine on
 xfwm4 can't make `MENU` blink, scroll the title or show the task address
 like the original title bar does. That would need a window manager of my own.
 
+In Thunar's icon view the selection box has rounded corners. Thunar draws
+that itself and the theme can't reach it.
+
 The original draws the mouse pointer with XOR. Xcursor can't, so it's a black
 arrow with a white outline.
 
@@ -265,6 +309,7 @@ arrow with a white outline.
 ```sh
 sudo rm /usr/share/xsessions/templeos.desktop
 rm -r ~/.local/share/themes/TempleOS ~/.local/share/icons/TempleOS \
+      ~/.local/share/themes/TempleOS-Thunar ~/.local/share/icons/TempleOS-Thunar \
       ~/.local/share/fonts/TempleStd.ttf \
       ~/.config/fontconfig/conf.d/60-templeos.conf ~/.config/templeos
 ```
