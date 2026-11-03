@@ -72,6 +72,11 @@ the `F6` in the top right corner is the last key indicator.
 Workspace D: with htop and Ctrl+Alt+B. The terminal is plain kitty, so
 anything that runs in a terminal gets the font and the palette.
 
+![Thunar with its own theme, showing the menu sprites](docs/thunar.png)
+
+Super+E opens Thunar with its own theme. This is `dados/menu`, the sprites
+the reader pulled out of the ISO for the PersonalMenu.
+
 ## Shortcuts
 
 These are the TempleOS ones. In the original F6, F7 and Ctrl+M belong to the
