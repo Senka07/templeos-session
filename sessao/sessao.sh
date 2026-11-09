@@ -14,6 +14,7 @@ fi
 if [ -n "$TEMPLEOS_XCH" ]; then export XDG_CONFIG_HOME="$TEMPLEOS_XCH"; else unset XDG_CONFIG_HOME; fi
 unset TEMPLEOS_XCH
 CFG=$TEMPLEOS_CFG
+export TEMPLEOS_WM_PID=$$  # a ultima linha faz exec no xfwm4: o PID continua este
 
 export XDG_CURRENT_DESKTOP=TempleOS
 export TEMPLEOS_TERM="kitty --config '$CFG/kitty.conf'"
@@ -25,7 +26,14 @@ export TEMPLEOS_TECLA TEMPLEOS_MENU_INICIAL
 # Teclado: no XFCE quem aplica o layout e o xfsettingsd, que aqui nao roda.
 # Precisa vir antes do atalhos.py, que traduz as teclas pelo mapa atual.
 if [ -n "$XKB_LAYOUT" ]; then
-  setxkbmap -layout "$XKB_LAYOUT" -option '' ${XKB_OPTIONS:+-option "$XKB_OPTIONS"}  # '' limpa as anteriores
+  setxkbmap ${XKB_MODEL:+-model "$XKB_MODEL"} -layout "$XKB_LAYOUT" \
+    -option '' ${XKB_OPTIONS:+-option "$XKB_OPTIONS"}  # '' limpa as anteriores
+fi
+
+# Tela sempre acesa, como no original. Aqui nao roda gerenciador de energia e
+# valeria o padrao do Xorg, que apaga o monitor apos 10 min parado.
+if [ "$TEMPLEOS_TELA_ACESA" != 0 ]; then
+  xset s off s noblank -dpms
 fi
 
 export XCURSOR_THEME=TempleOS XCURSOR_SIZE=22

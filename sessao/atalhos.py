@@ -139,7 +139,8 @@ def existe(cmd):
 
 def sair():
     def confirma():
-        os.kill(os.getppid(), signal.SIGTERM)  # o sessao.sh fez exec no xfwm4: o pai e o xfwm4
+        # Nao o getppid(): reiniciado com a sessao no ar, este processo tem outro pai
+        os.kill(int(os.environ.get('TEMPLEOS_WM_PID') or os.getppid()), signal.SIGTERM)
     d = Doc('Log Out', 24, 7, [
         [], [trecho('  Log out of TempleOS?')], [], [],
         [trecho('   '), botao('YES', confirma), trecho('  '), botao('NO', lambda: d.destroy())],
