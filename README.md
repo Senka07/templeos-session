@@ -50,6 +50,12 @@ borders mean normal and double lines mean focused, same as the windows. The
 icons are the Adwaita symbolic set recolored to the text blue. Only Thunar
 gets this. The programs it opens keep your normal theme.
 
+Notifications are DolDoc documents in the top right corner, from a small
+`org.freedesktop.Notifications` service in `sessao/avisos.py`: the app name as
+the title, the summary in red, the body in blue, actions as `$BT$` buttons.
+While the screen is locked they wait in a queue, so nobody reads them over your
+shoulder.
+
 Ctrl+Alt+L locks the screen with a small program of its own, `trava/trava.c`.
 TempleOS has no lock screen and no passwords, so this one is made of its
 windows: blue background, the status line clock, a double line window with a
@@ -196,7 +202,7 @@ The code is in Portuguese, both names and comments, because it's my first
 language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
-glyphs.
+glyphs, `avisos.py` is notifications and `trava/` the screen locker.
 
 ## Rebuilding from the ISO
 
@@ -315,6 +321,11 @@ typos with the wrong keyboard layout would lock the whole account for ten
 minutes. If the service file doesn't exist it refuses to lock at all, since PAM
 would fall through to the `other` policy and reject even the right password.
 
+Notification text can't go straight to the glyphs. The upper half of the
+TempleOS font follows CP437, so `é` drawn as a Latin-1 byte would come out as
+`Θ`. It goes through a conversion first. CP437 has no `ã`, so in Portuguese
+that one loses the tilde, and emoji just leave.
+
 Log Out used to send SIGTERM to `getppid()`, because `sessao.sh` ends with an
 `exec` into xfwm4. Restart `atalhos.py` with the session running and the parent
 is something else entirely. Now `sessao.sh` exports its own PID before the
@@ -330,6 +341,8 @@ line, and the terminal is at 12 px. That's right for 1280x1024 and fine on
 
 xfwm4 can't make `MENU` blink, scroll the title or show the task address
 like the original title bar does. That would need a window manager of my own.
+
+Notifications only show text: no icons, and no sounds.
 
 The locker has the limits of any X11 locker: Ctrl+Alt+Backspace (if you enabled
 it) ends the session and Ctrl+Alt+F2 switches to a console. With two monitors

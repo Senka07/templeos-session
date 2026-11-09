@@ -39,6 +39,7 @@ class Doc(Gtk.Window):
         self.sprites = []          # (x_px, y_px, pixbuf, acao)
         self.ao_enter = None
         self.ao_fechar = None
+        self.ao_clicar = None      # clique fora de qualquer link ou botao
         self.set_app_paintable(True)
         self.set_default_size(colunas * C, linhas * C)
         if x is not None:
@@ -95,6 +96,8 @@ class Doc(Gtk.Window):
                 if col <= alvo < col + largura and p['acao']:
                     p['acao'](); return True
                 col += largura
+        if self.ao_clicar:
+            self.ao_clicar()
         return True
 
     def tecla(self, _w, ev):

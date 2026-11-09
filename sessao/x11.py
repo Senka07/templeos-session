@@ -34,6 +34,7 @@ _f('XKeysymToKeycode', c_ubyte, [c_void_p, c_ulong])
 _f('XKeysymToString', c_char_p, [c_ulong])
 _f('XkbKeycodeToKeysym', c_ulong, [c_void_p, c_ubyte, c_int, c_int])
 _f('XQueryKeymap', c_int, [c_void_p, c_char * 32])
+_f('XGetSelectionOwner', c_ulong, [c_void_p, c_ulong])
 
 _TRATADOR = ctypes.CFUNCTYPE(c_int, c_void_p, c_void_p)(lambda d, e: 0)
 x11.XSetErrorHandler.argtypes = [ctypes.CFUNCTYPE(c_int, c_void_p, c_void_p)]
@@ -102,8 +103,9 @@ def janela_ativa():
     return v[0] if v else 0
 
 def janelas_normais():
-    """Clientes de baixo para cima, sem DOCK nem DESKTOP (a linha de status e o fundo)."""
-    fora = {atomo('_NET_WM_WINDOW_TYPE_DOCK'), atomo('_NET_WM_WINDOW_TYPE_DESKTOP')}
+    """Clientes de baixo para cima, sem a linha de status, o fundo e os avisos."""
+    fora = {atomo('_NET_WM_WINDOW_TYPE_DOCK'), atomo('_NET_WM_WINDOW_TYPE_DESKTOP'),
+            atomo('_NET_WM_WINDOW_TYPE_NOTIFICATION')}
     return [j for j in propriedade(RAIZ, '_NET_CLIENT_LIST_STACKING')
             if not fora & set(propriedade(j, '_NET_WM_WINDOW_TYPE'))]
 

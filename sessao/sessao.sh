@@ -52,6 +52,10 @@ for a in /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 \
   [ -x "$a" ] && { "$a" & break; }
 done
 
+# Notificacoes no estilo da sessao. Antes de qualquer app, senao o D-Bus ativa o
+# notifyd instalado na primeira notificacao.
+python3 "$D/avisos.py" &
+
 # Thunar ja como daemon: toda janela dele (Windows+E, menu, "abrir pasta"
 # pedido por outro app via D-Bus) sai deste processo, que tem o tema TempleOS.
 command -v thunar >/dev/null && sh "$D/thunar.sh" --daemon &
