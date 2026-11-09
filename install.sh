@@ -53,6 +53,13 @@ echo "all required dependencies found"
 [ "$1" = --check ] && exit 0
 
 sh "$D/sessao/instalar.sh" || exit 1
+
+# The help reader (Super+F1) shows the documents from the ISO
+if [ -f "$D/iso/TempleOS.ISO" ] && [ ! -d "$D/iso-extraida" ]; then
+  python3 -I "$D/extracao/redsea.py" "$D/iso/TempleOS.ISO" "$D/iso-extraida" >/dev/null || \
+    echo "warning: could not extract iso/TempleOS.ISO" >&2
+fi
+[ -d "$D/iso-extraida" ] || echo "note: no iso-extraida/, so the help reader has nothing to show (see the README)"
 cat <<EOF
 
 Done. Last step, register the session with your login manager (needs root):

@@ -17,6 +17,7 @@
     {"sprite": "Psalmody.png",  "rotulo": "Psalmody",  "acao": "hino"}
   ],
   "links": [
+    {"rotulo": "Help",        "acao": "ajuda"},
     {"rotulo": "Bible",       "acao": "biblia"},
     {"rotulo": "God Passage", "acao": "passagem"},
     {"rotulo": "God Song",    "acao": "hino"},

@@ -257,7 +257,11 @@ def ascii():
                        trecho(' '.join(chr(r * 16 + c) for c in range(16)))])
     Doc('ASCII', 38, 20, linhas).show_all()
 
-ACOES = dict(hino=hino, passagem=passagem, ascii=ascii, biblia=biblia, sair=sair)
+def ajuda():
+    # Processo proprio: um documento que derrube o leitor nao leva os atalhos junto
+    roda('python3 %s' % shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'leitor.py')))
+
+ACOES = dict(ajuda=ajuda, hino=hino, passagem=passagem, ascii=ascii, biblia=biblia, sair=sair)
 
 # ---------------------------------------------------------------- PersonalMenu
 class PersonalMenu(Doc):
@@ -419,6 +423,7 @@ def main():
         ('m', x11.CTRL): menu.alterna,
         ('F7', 0): latch, ('F7', x11.SHIFT): passagem, ('F6', 0): hino,
         ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco, ('l', C_A): bloqueia,
+        ('F1', x11.SUPER): ajuda,
     }
     for (ks, mods), cmd in le_programas().items():
         ao_apertar[(ks, mods)] = lambda cmd=cmd: roda(cmd)

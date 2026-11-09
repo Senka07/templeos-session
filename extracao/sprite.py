@@ -20,7 +20,8 @@ def doc_bins(path):
         bins[num] = d[i:i+size]; i += size
     return text, bins
 
-def render(elems, font, scale=1):
+def render(elems, font, scale=1, origem=False):
+    """origem=True devolve (imagem, x, y): onde o canto dela fica em relacao a origem do sprite."""
     W = 1024; img = Image.new('RGBA', (W, W), (0,0,0,0)); dr = ImageDraw.Draw(img)
     O = W//2; col = (0,0,0,255); thick = 1; x0 = y0 = 0; p = 0
     def P(x, y): return (O+x+x0, O+y+y0)
@@ -101,6 +102,8 @@ def render(elems, font, scale=1):
             vc, tc = struct.unpack_from('<ii', e, 12); size += vc*12 + tc*16
         p += size
     bb = img.getbbox()
+    if origem:
+        return (img.crop(bb), bb[0] - O, bb[1] - O) if bb else None
     return img.crop(bb) if bb else None
 
 if __name__ == '__main__':

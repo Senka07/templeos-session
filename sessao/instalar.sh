@@ -13,9 +13,10 @@ H=${1:-$HOME}
 CFG=$H/.config/templeos
 XML=$CFG/xfconf-home/xfce4/xfconf/xfce-perchannel-xml
 
-# A fonte so e refeita a partir da ISO extraida (ver README); sem ela vale a
-# TempleStd.ttf e o fonte8x8.json que ja vem no repositorio.
-if [ -f "$D/iso-extraida/Kernel/FontStd.HC" ]; then
+# A TempleStd.ttf e o fonte8x8.json ja vem no repositorio. Para refazer a partir
+# da ISO extraida, ver README: fazer isso a cada instalacao mudaria o TTF
+# versionado (ele guarda a data em que foi gerado).
+if [ ! -f "$D/fonte/TempleStd.ttf" ]; then
   python3 -I "$D/fonte/gerar-fonte.py" >/dev/null
 fi
 python3 -I "$D/xfwm4/gerar-tema.py" "$H/.local/share/themes" >/dev/null

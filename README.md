@@ -50,6 +50,13 @@ borders mean normal and double lines mean focused, same as the windows. The
 icons are the Adwaita symbolic set recolored to the text blue. Only Thunar
 gets this. The programs it opens keep your normal theme.
 
+The help is here too. Super+F1 or `Help` in the PersonalMenu opens a DolDoc
+reader that shows the documents and source code from the ISO the way the
+original editor does: colors, links, trees that open and close, sprites sitting
+in the middle of the code, and HolyC highlighted by the same state machine as
+`Adam/DolDoc/DocHighlight.HC`. Clicking a function name takes you to where it's
+defined. Esc goes back one document, also like the original.
+
 Notifications are DolDoc documents in the top right corner, from a small
 `org.freedesktop.Notifications` service in `sessao/avisos.py`: the app name as
 the title, the summary in red, the body in blue, actions as `$BT$` buttons.
@@ -113,6 +120,11 @@ DolDoc editor, which is in every window; here they are global.
 Workspaces: Super+1 to 4 switches, Super+Shift+1 to 4 takes the focused window
 along, and xfwm4's own Ctrl+F1 to F4 and Ctrl+Alt+arrows also work.
 Super+W closes a window.
+
+Super+F1 opens the help reader. It's not plain F1, because that key belongs to
+your apps. Inside the reader F1 is the help index, Esc goes back, Shift+Esc
+closes, Tab and Enter walk the links, Ctrl+F searches (F3 repeats) and
+Ctrl+plus and Ctrl+minus change the text between 8, 12 and 16 px.
 
 Since F6, F7 and Ctrl+M are grabbed globally, apps won't see them. Firefox
 uses F6 and F7, mc and htop use them too, and Ctrl+M is Enter in a terminal.
@@ -202,13 +214,15 @@ The code is in Portuguese, both names and comments, because it's my first
 language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
-glyphs, `avisos.py` is notifications and `trava/` the screen locker.
+glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader, and
+`trava/` the screen locker.
 
 ## Rebuilding from the ISO
 
 The font, the sprites and the text files are already in `dados/` and `fonte/`,
-so you don't need the ISO to install. If you want to regenerate them, or have
-the menu logo boot TempleOS in QEMU, get `TempleOS.ISO` from templeos.org and:
+so you don't need the ISO to install. You do need it for the help reader, to
+have the menu logo boot TempleOS in QEMU, or to regenerate those files. Get
+`TempleOS.ISO` from templeos.org and:
 
 ```sh
 mkdir -p iso && cp ~/Downloads/TempleOS.ISO iso/
@@ -326,6 +340,12 @@ TempleOS font follows CP437, so `é` drawn as a Latin-1 byte would come out as
 `Θ`. It goes through a conversion first. CP437 has no `ã`, so in Portuguese
 that one loses the tilde, and emoji just leave.
 
+My first regex for finding DolDoc commands froze on the bigger files, with
+nested groups backtracking forever. A DolDoc command is simple enough for a
+small hand written scanner: `$`, then anything up to the next `$` that's not
+inside quotes. That scanner went through all 642 text files in the ISO without
+a failure, at 80 and 40 columns, with the trees open and closed.
+
 Log Out used to send SIGTERM to `getppid()`, because `sessao.sh` ends with an
 `exec` into xfwm4. Restart `atalhos.py` with the session running and the parent
 is something else entirely. Now `sessao.sh` exports its own PID before the
@@ -341,6 +361,12 @@ line, and the terminal is at 12 px. That's right for 1280x1024 and fine on
 
 xfwm4 can't make `MENU` blink, scroll the title or show the task address
 like the original title bar does. That would need a window manager of my own.
+
+The help reader only reads. You can't edit or copy text, macros like "Take Tour"
+need the real system and just say so, and 3D meshes and a few rare sprite types
+aren't drawn. It leaves out `Adam/God/HSNotes.DD` and
+`Demo/AcctExample/PersonalNotes.DD`, which have offensive content. About 20 of
+the 5674 links are broken because they point to files that aren't in the ISO.
 
 Notifications only show text: no icons, and no sounds.
 
