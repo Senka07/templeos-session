@@ -16,3 +16,5 @@ if [[ -n $TEMPLEOS_BOAS_VINDAS ]]; then
   unset TEMPLEOS_BOAS_VINDAS
   fastfetch -c "$TEMPLEOS_CFG/fastfetch.jsonc"
 fi
+# A config normal do fastfetch tem logo ao lado dos dados e nao cabe em 50 colunas
+alias fastfetch='fastfetch -c "$TEMPLEOS_CFG/fastfetch.jsonc"'
