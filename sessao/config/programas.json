@@ -11,6 +11,5 @@
   "Alt+Print": "xfce4-screenshooter -w",
   "Shift+Print": "xfce4-screenshooter -r",
   "Ctrl+Shift+Escape": "xfce4-taskmanager",
-  "Ctrl+Alt+Escape": "xkill",
-  "Ctrl+Alt+L": "dm-tool lock"
+  "Ctrl+Alt+Escape": "xkill"
 }

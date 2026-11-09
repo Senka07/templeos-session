@@ -39,7 +39,10 @@ opcional paplay libpulse "God Song plays the hymn"
 opcional wpctl wireplumber "Ctrl+Alt+M mute"
 opcional less less "Ctrl+Alt+B Bible"
 opcional thunar thunar "Super+E file manager, with its own TempleOS theme"
-opcional gcc gcc "builds the module that themes Thunar"
+opcional gcc gcc "builds the screen locker and the module that themes Thunar"
+opcional dm-tool lightdm "Ctrl+Alt+L falls back to it if the locker fails; see sessao.conf"
+[ -e /etc/pam.d/vlock ] || [ -e /usr/lib/pam.d/vlock ] || \
+  echo "  optional: PAM service vlock (kbd on Arch, vlock elsewhere) - without it Ctrl+Alt+L uses the fallback"
 opcional qemu-system-x86_64 qemu-desktop "the TempleOS logo in the menu boots the real thing"
 
 if [ "$falta" = 1 ]; then
@@ -58,4 +61,8 @@ Done. Last step, register the session with your login manager (needs root):
 
 Then log out and pick "TempleOS" in the session list.
 Your settings live in ~/.config/templeos/ (sessao.conf, menu.json, programas.json).
+
+Once you're in, try the screen locker with a timeout before trusting Ctrl+Alt+L:
+
+  ~/.config/templeos/trava --timeout 60; echo \$?
 EOF

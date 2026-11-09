@@ -113,8 +113,8 @@ MODS = {'ctrl': x11.CTRL, 'alt': x11.ALT, 'shift': x11.SHIFT, 'super': x11.SUPER
 def le_programas():
     """config/programas.json: "Ctrl+Alt+F": "thunar" -> {('f', CTRL|ALT): 'thunar'}.
 
-    O Ctrl+Alt+Delete e o Log Out daqui (nao ha xfce4-session) e o bloqueio vai
-    direto ao LightDM (o xflock4 so fala com o xfce4-session).
+    O Ctrl+Alt+Delete e o Log Out daqui (nao ha xfce4-session) e o Ctrl+Alt+L
+    e o bloqueia(), logo abaixo.
     """
     progs = {}
     for tecla, cmd in json.load(open(config('programas.json'))).items():
@@ -136,6 +136,36 @@ def existe(cmd):
     except (ValueError, IndexError):
         return False
     return prog == '$TERM' or shutil.which(os.path.expanduser(prog)) is not None
+
+def bloqueia():
+    """Ctrl+Alt+L: trava/trava.c com uma passagem da Biblia na tela.
+
+    A reserva (a tela de login do LightDM) entra se o binario nao existir e se
+    ele sair com erro, inclusive se cair com a tela ja bloqueada. Em outro
+    gerenciador de login, ver TEMPLEOS_RESERVA_BLOQUEIO no sessao.conf.
+    """
+    reserva = os.environ.get('TEMPLEOS_RESERVA_BLOQUEIO') or 'dm-tool lock'
+    cfg = os.environ.get('TEMPLEOS_CFG') or os.path.expanduser('~/.config/templeos')
+    trava = os.path.join(cfg, 'trava')
+    if not os.access(trava, os.X_OK):
+        roda(reserva)
+        return
+    try:
+        oraculo.esvazia()
+        oraculo.insere()
+        ref, linhas = deus.passagem(oraculo, 16)
+        # A Biblia vem em linhas de ~70 colunas: a passagem cai no meio de uma
+        # frase. Na tela de bloqueio ela comeca no versiculo da referencia.
+        versiculo = ref.rsplit(' ', 1)[-1]
+        i = next((i for i, l in enumerate(linhas) if l.startswith(versiculo + ' ')), 0)
+        texto = '\n'.join([ref] + linhas[i:i + 6]) + '\n'
+    except Exception as e:  # sem passagem, mas nunca sem bloquear
+        print('passagem falhou:', e, file=sys.stderr)
+        texto = ''
+    p = subprocess.Popen('%s || %s' % (shlex.quote(trava), reserva), shell=True,
+                         stdin=subprocess.PIPE, start_new_session=True, env=ambiente())
+    p.stdin.write(texto.encode('cp437', 'replace'))
+    p.stdin.close()
 
 def sair():
     def confirma():
@@ -388,7 +418,7 @@ def main():
         ('m', C_A): mudo, ('s', C_A): captura, ('b', C_A): biblia, ('a', C_A): ascii,
         ('m', x11.CTRL): menu.alterna,
         ('F7', 0): latch, ('F7', x11.SHIFT): passagem, ('F6', 0): hino,
-        ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco,
+        ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco, ('l', C_A): bloqueia,
     }
     for (ks, mods), cmd in le_programas().items():
         ao_apertar[(ks, mods)] = lambda cmd=cmd: roda(cmd)

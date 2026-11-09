@@ -50,6 +50,11 @@ borders mean normal and double lines mean focused, same as the windows. The
 icons are the Adwaita symbolic set recolored to the text blue. Only Thunar
 gets this. The programs it opens keep your normal theme.
 
+Ctrl+Alt+L locks the screen with a small program of its own, `trava/trava.c`.
+TempleOS has no lock screen and no passwords, so this one is made of its
+windows: blue background, the status line clock, a double line window with a
+Bible passage picked by the oracle, and the password field.
+
 There are four workspaces named C:, D:, E: and F: in the status line. TempleOS
 doesn't have workspaces, but I needed them.
 
@@ -97,6 +102,7 @@ DolDoc editor, which is in every window; here they are global.
 | Shift+F7 | God Passage |
 | F6 | God Song |
 | Ctrl+Alt+Delete | Log Out |
+| Ctrl+Alt+L | lock the screen (not in the original, which has no lock) |
 
 Workspaces: Super+1 to 4 switches, Super+Shift+1 to 4 takes the focused window
 along, and xfwm4's own Ctrl+F1 to F4 and Ctrl+Alt+arrows also work.
@@ -121,8 +127,8 @@ Required (Arch names): `xfwm4`, `dbus`, `python`, `python-gobject`,
 
 Optional: `fastfetch`, `xsettingsd` (keeps the cursor the same in GTK apps),
 `xorg-setxkbmap`, `libpulse` (for the God Song audio), `wireplumber` (mute),
-`polkit-gnome`, `thunar` and `gcc` (to build the module that themes it), and
-`qemu-desktop` if you want the TempleOS logo in the menu to boot the real
+`polkit-gnome`, `thunar`, `gcc` (builds the screen locker and the module that
+themes Thunar), and `qemu-desktop` if you want the TempleOS logo in the menu to boot the real
 thing.
 
 ```sh
@@ -133,9 +139,16 @@ sudo install -m644 build/templeos.desktop /usr/share/xsessions/
 ```
 
 Log out and choose "TempleOS" in the session list. Any login manager that reads
-`/usr/share/xsessions` should work. I use LightDM, and Ctrl+Alt+L locks the
-screen through `dm-tool`, so on GDM or SDDM change that line in
-`programas.json`.
+`/usr/share/xsessions` should work. I use LightDM. If the screen locker ever
+fails, it falls back to `dm-tool lock`, so on GDM or SDDM set
+`TEMPLEOS_RESERVA_BLOQUEIO` in `sessao.conf` to a locker you have.
+
+The first time, test the locker with a timeout. It opens by itself after that
+many seconds, so a problem with your password setup can't lock you out:
+
+```sh
+~/.config/templeos/trava --timeout 60; echo $?
+```
 
 `install.sh` only writes to paths that belong to the session:
 `~/.local/share/themes/TempleOS`, `~/.local/share/themes/TempleOS-Thunar`,
@@ -162,8 +175,9 @@ Everything you'd want to change is in `~/.config/templeos/`. These files are
 copied there the first time and never overwritten after that.
 
 `sessao.conf` has the keyboard layout (the session doesn't run xfsettingsd,
-so it won't pick up the layout from XFCE), and switches to hide the last key
-indicator or start with the menu hidden.
+so it won't pick up the layout from XFCE), the locker fallback, and switches to
+let the monitor sleep, hide the last key indicator or start with the menu
+hidden.
 
 `menu.json` is the PersonalMenu. Each icon has a sprite from `dados/menu/`, a
 label and a command. Programs that aren't installed are left out of the menu,
@@ -292,6 +306,20 @@ are written with a non-breaking space (U+00A0), which is 0xFF in CP437, and
 0xFF in the TempleOS font is a filled square. The font now maps U+00A0 to the
 space glyph.
 
+On X11, a locker that crashes hands your session back unlocked, so it's C and not the
+GTK the rest of the session uses, and the shortcut runs `trava || dm-tool lock`:
+only the right password exits with 0, and anything else lands on the login
+screen. I tested that with `kill -9` while locked. It uses the `vlock` PAM
+service because `login` and `system-auth` go through `pam_faillock`, and three
+typos with the wrong keyboard layout would lock the whole account for ten
+minutes. If the service file doesn't exist it refuses to lock at all, since PAM
+would fall through to the `other` policy and reject even the right password.
+
+Log Out used to send SIGTERM to `getppid()`, because `sessao.sh` ends with an
+`exec` into xfwm4. Restart `atalhos.py` with the session running and the parent
+is something else entirely. Now `sessao.sh` exports its own PID before the
+`exec`.
+
 ## Limitations
 
 The scale is fixed at 2x (16 px characters) for borders, titles and the status
@@ -302,6 +330,10 @@ line, and the terminal is at 12 px. That's right for 1280x1024 and fine on
 
 xfwm4 can't make `MENU` blink, scroll the title or show the task address
 like the original title bar does. That would need a window manager of my own.
+
+The locker has the limits of any X11 locker: Ctrl+Alt+Backspace (if you enabled
+it) ends the session and Ctrl+Alt+F2 switches to a console. With two monitors
+its window is centered on the whole screen, so it falls across the gap.
 
 In Thunar's icon view the selection box has rounded corners. Thunar draws
 that itself and the theme can't reach it.

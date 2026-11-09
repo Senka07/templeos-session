@@ -24,7 +24,9 @@ sh "$D/instalar.sh" "$F" > "$T/instalar.log" 2>&1
 # TEMPLEOS_TELA muda a resolucao do teste (padrao: 1280x1024)
 Xephyr :9 -screen "${TEMPLEOS_TELA:-1280x1024}" -resizeable -no-host-grab >/dev/null 2>&1 &
 sleep 1.5
+# A reserva do bloqueio nao pode ser o dm-tool: ele bloquearia a sessao de verdade
 env -u XDG_CONFIG_HOME -u XDG_STATE_HOME -u XDG_DATA_HOME -u SESSION_MANAGER \
-    -u DBUS_SESSION_BUS_ADDRESS -u TEMPLEOS_SESSAO \
+    -u DBUS_SESSION_BUS_ADDRESS -u TEMPLEOS_SESSAO -u XDG_SEAT_PATH -u XDG_SESSION_PATH \
+    TEMPLEOS_RESERVA_BLOQUEIO="touch '$T/reserva-acionada'" \
     HOME="$F" DISPLAY=:9 sh "$D/sessao.sh" >"$T/sessao.log" 2>&1 &
 echo "teste em :9, home falso em $F"

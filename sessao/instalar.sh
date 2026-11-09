@@ -33,6 +33,12 @@ if ! gcc -O2 -shared -fPIC -o "$CFG/tema-app.so" "$D/thunar/tema-app.c" \
      $(pkg-config --cflags --libs gtk+-3.0) 2>/dev/null; then
   echo "aviso: sem gcc ou gtk3 para compilar o thunar/tema-app.c; o Thunar fica com o tema normal" >&2
 fi
+# O bloqueador de tela (trava/trava.c); sem ele o Ctrl+Alt+L usa a reserva
+python3 -I "$D/trava/gerar-fonte-h.py" > "$CFG/fonte8x8.h"
+if ! gcc -O2 -Wall -I"$CFG" -o "$CFG/trava" "$D/trava/trava.c" -lX11 -lpam 2>"$CFG/trava.log"; then
+  rm -f "$CFG/trava"
+  echo "warning: could not build trava/trava.c (see $CFG/trava.log); Ctrl+Alt+L falls back to dm-tool" >&2
+fi
 { cat "$D/sessao/config/kitty.conf"; echo; echo "env ZDOTDIR=$CFG/zsh"; } > "$CFG/kitty.conf"
 sed "s|@RAIZ@|$D|g" "$D/sessao/config/fastfetch.jsonc" > "$CFG/fastfetch.jsonc"
 # Os arquivos que a pessoa edita so sao copiados na primeira vez
