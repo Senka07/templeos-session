@@ -24,7 +24,7 @@ Comandos pela entrada padrao, uma linha cada: "+" dobra, "-" divide. O
 atalhos.py e quem escreve; se ele morrer, a entrada fecha e o zoom acaba junto.
 Uso direto, para testar: python3 lupa.py [fator inicial]
 """
-import ctypes, os, select, sys, time
+import ctypes, os, select, signal, sys, time
 from ctypes import (c_char_p, c_int, c_long, c_short, c_uint, c_ulong, c_ushort,
                     c_void_p, POINTER, Structure, byref)
 
@@ -316,6 +316,9 @@ class Lupa:
 
 def main():
     z = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+    # kill tambem passa pelo finally. Mesmo sem isso o cursor voltaria: o X
+    # esconde o cursor so enquanto o cliente que pediu esta conectado.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     lupa = Lupa(z)
     entrada = sys.stdin.fileno()
     lendo = not os.isatty(entrada)
