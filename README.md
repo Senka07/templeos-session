@@ -76,6 +76,14 @@ the title, the summary in red, the body in blue, actions as `$BT$` buttons.
 While the screen is locked they wait in a queue, so nobody reads them over your
 shoulder.
 
+A critical notification comes with the beep TempleOS gives when something goes
+wrong, the PC speaker at `Snd(62)` for half a second. It beeps when the
+notification arrives, even with the screen locked, since the sound gives away
+nothing of the text. An update to one that was already critical (a battery
+going down) doesn't beep again, a burst of them beeps once, and an app can
+ask for silence with the `suppress-sound` hint. `TEMPLEOS_BIPE=0` in
+`sessao.conf` keeps them all quiet.
+
 Ctrl+Alt+L locks the screen with a small program of its own, `trava/trava.c`.
 TempleOS has no lock screen and no passwords, so this one is made of its
 windows: blue background, the status line clock, a double line window with a
@@ -537,7 +545,8 @@ aren't drawn. It leaves out `Adam/God/HSNotes.DD` and
 `Demo/AcctExample/PersonalNotes.DD`, which have offensive content. About 20 of
 the 5674 links are broken because they point to files that aren't in the ISO.
 
-Notifications only show text: no icons, and no sounds.
+Notifications only show text, no icons. The only sound is the beep on critical
+ones; a `sound-name` or `sound-file` an app asks for is ignored.
 
 The JukeBox plays the songs and shows their words and colors, but the
 "has graphics" songs don't get their graphics (the candle in `night`, the

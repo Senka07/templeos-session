@@ -14,6 +14,11 @@ nele que os apps abertos daqui falam. Mas servico do systemd, timer, cron, ssh e
 o que mais nao descende da sessao usam o barramento do usuario
 ($XDG_RUNTIME_DIR/bus); sem dono la, o aviso se perde ou ativa o notifyd sem
 tema. TEMPLEOS_BARRAMENTO_USUARIO troca esse endereco; vazio ou 0 desliga.
+
+Aviso critico (urgency 2) chega com o Beep do original, o alto-falante do PC
+em Snd(62) por meio segundo. Uma vez por aviso: a atualizacao de um que ja era
+critico (bateria baixando, por exemplo) nao bipa de novo. O app pode pedir
+silencio com o hint suppress-sound; TEMPLEOS_BIPE=0 cala todos.
 """
 import html, os, re, sys, textwrap, warnings
 import gi
@@ -22,7 +27,7 @@ gi.require_version('Gdk', '3.0')
 from gi.repository import Gtk, Gdk, Gio, GLib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import x11
+import x11, musica
 from doc import Doc, trecho, botao
 from texto import C, BLUE, RED, WHITE, LTBLUE, escreve, para_glifos
 
@@ -49,6 +54,8 @@ INTERNAS = COLS - 4          # colunas de texto: moldura e um espaco de cada lad
 MAX_CORPO = 6                # linhas
 MAX_NA_TELA = 5
 MAX_NA_FILA = 20
+BIPE = os.environ.get('TEMPLEOS_BIPE', '1') != '0'
+BIPE_INTERVALO = 2.0         # s; uma rajada de avisos criticos bipa uma vez
 PADRAO_MS = 8000
 EXPIROU, DISPENSOU, PEDIRAM = 1, 2, 3   # motivos de NotificationClosed
 # glifos de moldura em linha simples (ver BORDAS em xfwm4/gerar-tema.py)
@@ -145,6 +152,7 @@ class Central:
         self.ativos, self.fila, self.proximo = [], [], 1
         self.conexao = None
         self.origem = {}   # ident -> conexao de onde veio (os sinais voltam por ela)
+        self.ultimo_bipe = 0.0
         self.no = Gio.DBusNodeInfo.new_for_xml(INTERFACE).interfaces[0]
         tela = Gdk.Screen.get_default()
         tela.connect('size-changed', self.tela_mudou)
@@ -216,8 +224,11 @@ class Central:
         campo = lambda i: params.get_child_value(i).unpack()
         troca = campo(1)
         acoes_v = campo(5)
-        urg = params.get_child_value(6).lookup_value('urgency', GLib.VariantType('y'))
+        hints = params.get_child_value(6)
+        urg = hints.lookup_value('urgency', GLib.VariantType('y'))
         critico = urg is not None and urg.get_byte() == 2
+        mudo = hints.lookup_value('suppress-sound', GLib.VariantType('b'))
+        mudo = mudo is not None and mudo.get_boolean()
         dados = dict(
             app=campo(0), titulo=sem_marcacao(campo(3)), corpo=sem_marcacao(campo(4)),
             acoes=[(c, r) for c, r in zip(acoes_v[::2], acoes_v[1::2]) if c != 'default'],
@@ -226,8 +237,28 @@ class Central:
         if not troca:
             self.proximo += 1
         self.origem[ident] = con
+        # Bipa na chegada, mesmo com a tela bloqueada: o som avisa sem mostrar
+        # o texto, que espera na fila.
+        if critico and not mudo and not self.era_critico(ident):
+            self.bipa()
         self.mostra_ou_enfileira(ident, dados)
         return ident
+
+    def era_critico(self, ident):
+        """O aviso que este substitui (replaces_id) ja era critico?"""
+        for a in self.ativos:
+            if a.ident == ident:
+                return a.dados['critico']
+        for i, dados in self.fila:
+            if i == ident:
+                return dados['critico']
+        return False
+
+    def bipa(self):
+        agora = GLib.get_monotonic_time() / 1e6
+        if BIPE and agora - self.ultimo_bipe >= BIPE_INTERVALO:
+            self.ultimo_bipe = agora
+            musica.bipe()
 
     def close(self, ident):
         for a in self.ativos:

@@ -22,7 +22,7 @@ export TEMPLEOS_TERM="kitty --config '$CFG/kitty.conf'"
 # Ajustes locais (teclado, ultima tecla, menu): ver config/sessao.conf.
 [ -f "$CFG/sessao.conf" ] && . "$CFG/sessao.conf"
 export TEMPLEOS_TECLA TEMPLEOS_MENU_INICIAL TEMPLEOS_RESERVA_BLOQUEIO TEMPLEOS_BLOQUEIO_MIN \
-  TEMPLEOS_ESCONDE
+  TEMPLEOS_ESCONDE TEMPLEOS_BIPE
 
 # Teclado: no XFCE quem aplica o layout e o xfsettingsd, que aqui nao roda.
 # Precisa vir antes do atalhos.py, que traduz as teclas pelo mapa atual.
