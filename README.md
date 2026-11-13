@@ -407,6 +407,19 @@ typos with the wrong keyboard layout would lock the whole account for ten
 minutes. If the service file doesn't exist it refuses to lock at all, since PAM
 would fall through to the `other` policy and reject even the right password.
 
+The session runs on its own D-Bus (the `dbus-run-session` at the top of
+`sessao.sh`, so xfconf reads the session's settings and not XFCE's), and every
+app opened from it talks to that bus. Anything that didn't start from the
+session doesn't: systemd user services and timers, cron jobs, a script over
+ssh. Those reach the user bus at `$XDG_RUNTIME_DIR/bus`, where nobody answered
+for notifications, so they either got lost or woke up xfce4-notifyd in plain
+GTK. `avisos.py` holds the name on both buses now, and the replies (which
+button was clicked, when it closed) go back on the bus the notification came
+from. Try it with
+`DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus notify-send hi`.
+`TEMPLEOS_BARRAMENTO_USUARIO=0` turns it off; the test session in Xephyr does
+that, or it would take the name from the real one.
+
 Notification text can't go straight to the glyphs. The upper half of the
 TempleOS font follows CP437, so `é` drawn as a Latin-1 byte would come out as
 `Θ`. It goes through a conversion first. Emoji just leave.

@@ -8,6 +8,12 @@ como titulo, resumo em vermelho e corpo em azul, os botoes das acoes em $BT.
 Clicar em qualquer lugar fecha e dispara a acao "default", se houver. Enquanto a
 tela esta bloqueada (selecao _TEMPLEOS_TRAVA, ver trava/trava.c) os avisos ficam
 na fila: o texto deles nao deve aparecer na tela de quem nao destravou.
+
+Atende em dois barramentos. A sessao roda num D-Bus proprio (ver sessao.sh), e e
+nele que os apps abertos daqui falam. Mas servico do systemd, timer, cron, ssh e
+o que mais nao descende da sessao usam o barramento do usuario
+($XDG_RUNTIME_DIR/bus); sem dono la, o aviso se perde ou ativa o notifyd sem
+tema. TEMPLEOS_BARRAMENTO_USUARIO troca esse endereco; vazio ou 0 desliga.
 """
 import html, os, re, sys, textwrap, warnings
 import gi
@@ -47,6 +53,21 @@ PADRAO_MS = 8000
 EXPIROU, DISPENSOU, PEDIRAM = 1, 2, 3   # motivos de NotificationClosed
 # glifos de moldura em linha simples (ver BORDAS em xfwm4/gerar-tema.py)
 H, V, SE, SD, IE, ID = '\x02', '\x04', '\x06', '\x08', '\x0a', '\x0c'
+
+def endereco_usuario():
+    """Endereco do barramento do usuario, se for outro que o da sessao."""
+    end = os.environ.get('TEMPLEOS_BARRAMENTO_USUARIO')
+    if end is None:
+        run = os.environ.get('XDG_RUNTIME_DIR')
+        if not run or not os.path.exists(os.path.join(run, 'bus')):
+            return None
+        end = 'unix:path=' + os.path.join(run, 'bus')
+    if end in ('', '0'):
+        return None
+    # o da sessao vem com ",guid=...": compara so o caminho
+    if os.environ.get('DBUS_SESSION_BUS_ADDRESS', '').split(',')[0] == end.split(',')[0]:
+        return None
+    return end
 
 def sem_marcacao(s):
     # Nao anunciamos body-markup, mas alguns apps mandam mesmo assim
@@ -123,6 +144,7 @@ class Central:
     def __init__(self):
         self.ativos, self.fila, self.proximo = [], [], 1
         self.conexao = None
+        self.origem = {}   # ident -> conexao de onde veio (os sinais voltam por ela)
         self.no = Gio.DBusNodeInfo.new_for_xml(INTERFACE).interfaces[0]
         tela = Gdk.Screen.get_default()
         tela.connect('size-changed', self.tela_mudou)
@@ -132,16 +154,41 @@ class Central:
         # do nome e o assume quando o dono atual (o xfce4-notifyd) sair.
         Gio.bus_own_name(Gio.BusType.SESSION, NOME, Gio.BusNameOwnerFlags.ALLOW_REPLACEMENT,
                          self.barramento, None, None)
+        self.liga_usuario()
 
     # ------------------------------------------------------------ D-Bus
     def barramento(self, conexao, _nome):
         self.conexao = conexao
         conexao.register_object(CAMINHO, self.no, self.chamada, None, None)
 
-    def chamada(self, _con, _rem, _cam, _int, metodo, params, inv):
+    def liga_usuario(self):
+        end = endereco_usuario()
+        if end:
+            Gio.DBusConnection.new_for_address(
+                end, Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
+                | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION, None, None, self.ligou_usuario)
+        return False
+
+    def ligou_usuario(self, _fonte, resultado):
+        try:
+            con = Gio.DBusConnection.new_for_address_finish(resultado)
+        except GLib.Error as e:
+            print('avisos: barramento do usuario:', e.message, file=sys.stderr)
+            GLib.timeout_add_seconds(30, self.liga_usuario)
+            return
+        # Se o dbus-broker do usuario reiniciar, a conexao fecha: so este lado
+        # cai (o padrao de conexao por endereco e nao encerrar o processo) e
+        # tenta de novo.
+        con.set_exit_on_close(False)
+        con.connect('closed', lambda *_: GLib.timeout_add_seconds(5, self.liga_usuario))
+        con.register_object(CAMINHO, self.no, self.chamada, None, None)
+        Gio.bus_own_name_on_connection(con, NOME, Gio.BusNameOwnerFlags.ALLOW_REPLACEMENT,
+                                       None, None)
+
+    def chamada(self, con, _rem, _cam, _int, metodo, params, inv):
         try:
             if metodo == 'Notify':
-                inv.return_value(GLib.Variant('(u)', (self.notify(params),)))
+                inv.return_value(GLib.Variant('(u)', (self.notify(params, con),)))
             elif metodo == 'CloseNotification':
                 self.close(params.unpack()[0])
                 inv.return_value(None)
@@ -156,10 +203,15 @@ class Central:
             inv.return_dbus_error('org.freedesktop.DBus.Error.Failed', str(e))
 
     def emite(self, sinal, tipo, valores):
-        if self.conexao:
-            self.conexao.emit_signal(None, CAMINHO, NOME, sinal, GLib.Variant(tipo, valores))
+        ident = valores[0]
+        if sinal == 'NotificationClosed':
+            con = self.origem.pop(ident, self.conexao)
+        else:
+            con = self.origem.get(ident, self.conexao)
+        if con and not con.is_closed():
+            con.emit_signal(None, CAMINHO, NOME, sinal, GLib.Variant(tipo, valores))
 
-    def notify(self, params):
+    def notify(self, params, con):
         # Campo a campo: desempacotar os hints inteiros copiaria o image-data
         campo = lambda i: params.get_child_value(i).unpack()
         troca = campo(1)
@@ -173,6 +225,7 @@ class Central:
         ident = troca or self.proximo
         if not troca:
             self.proximo += 1
+        self.origem[ident] = con
         self.mostra_ou_enfileira(ident, dados)
         return ident
 
