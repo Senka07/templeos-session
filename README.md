@@ -295,7 +295,8 @@ and its song files,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
 glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader,
 `lupa.py` the zoom, `grade.py` the mouse grid, `protetor.py` the screen saver
-service, and `bloqueio.py` plus `trava/` the screen locker.
+service, `ponte-systemd.py` the systemd bridge described below, and
+`bloqueio.py` plus `trava/` the screen locker.
 
 ## Rebuilding from the ISO
 
@@ -427,6 +428,20 @@ from. Try it with
 `DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus notify-send hi`.
 `TEMPLEOS_BARRAMENTO_USUARIO=0` turns it off; the test session in Xephyr does
 that, or it would take the name from the real one.
+
+The same split broke `systemd-run --user --wait` from a session terminal, with
+"Process org.freedesktop.systemd1 exited with status 1". Plain `systemd-run
+--user` and `systemctl --user` talk to systemd's own socket and never noticed,
+but `--wait`, `--pty`, `--pipe` and `--shell` look for systemd on the session
+bus, and so does `flatpak run` when it puts each app in its own scope. The
+session bus has no systemd, only a `.service` file whose command is
+`/bin/false`, which is what the error is about. `sessao/ponte-systemd.py` takes
+the `org.freedesktop.systemd1` name on the session bus and passes every call
+through to the real one, file descriptors included, and every signal back. One
+detail took a second look: `--wait` asks for `AddRef`, which keeps the finished
+unit loaded until whoever asked goes away, so its exit status can still be read.
+To systemd that is the bridge, which never goes away, so the bridge watches the
+real client and calls `UnrefUnit` when it leaves.
 
 Notification text can't go straight to the glyphs. The upper half of the
 TempleOS font follows CP437, so `é` drawn as a Latin-1 byte would come out as

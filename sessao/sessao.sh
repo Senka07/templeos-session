@@ -53,6 +53,10 @@ for a in /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 \
   [ -x "$a" ] && { "$a" & break; }
 done
 
+# O systemd --user so esta no barramento do usuario; a ponte o poe tambem no
+# da sessao (systemd-run --user --wait, scopes do flatpak). Antes dos apps.
+python3 "$D/ponte-systemd.py" &
+
 # Notificacoes no estilo da sessao. Antes de qualquer app, senao o D-Bus ativa o
 # notifyd instalado na primeira notificacao.
 python3 "$D/avisos.py" &
