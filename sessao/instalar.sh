@@ -46,7 +46,9 @@ sed "s|@RAIZ@|$D|g" "$D/sessao/config/fastfetch.jsonc" > "$CFG/fastfetch.jsonc"
 for f in menu.json programas.json sessao.conf; do
   [ -e "$CFG/$f" ] || cp "$D/sessao/config/$f" "$CFG/"
 done
-fc-cache "$H/.local/share/fonts" >/dev/null 2>&1 || true
+# -f: sobrescrever a TempleStd.ttf nao muda a data da pasta, e sem -f o
+# fc-cache acha que nada mudou e os apps seguem com a fonte velha
+fc-cache -f "$H/.local/share/fonts" >/dev/null 2>&1 || true
 
 mkdir -p "$D/build"
 sed "s|@RAIZ@|$D|g" "$D/sessao/templeos.desktop" > "$D/build/templeos.desktop"

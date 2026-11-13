@@ -4,7 +4,7 @@ Sem FreeType no caminho: cada glifo vira uma superficie cairo de 16x16
 (8x8 ampliado 2x) por par de cores, guardada em cache. A tela e uma grade de
 celulas, como o text_base do original.
 """
-import json, os
+import json, os, unicodedata
 import cairo
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +19,16 @@ PALETA = ['000000', '0000AA', '00AA00', '00AAAA', 'AA0000', 'AA00AA', 'AA5500', 
  DKGRAY, LTBLUE, LTGREEN, LTCYAN, LTRED, LTPURPLE, YELLOW, WHITE) = range(16)
 
 GLIFOS = json.load(open(os.path.join(RAIZ, 'dados', 'fonte8x8.json')))
+# Os caracteres que a CP437 nao tem (ã, Á...; ver fonte/gerar-fonte.py) entram
+# depois dos 256 originais. EXTRA leva o caractere ao indice dele em GLIFOS.
+EXTRA = {}
+try:
+    _extra = json.load(open(os.path.join(RAIZ, 'dados', 'fonte8x8-extra.json')))
+except FileNotFoundError:
+    _extra = {}
+for _hexa, _v in _extra.items():
+    EXTRA[chr(int(_hexa, 16))] = chr(len(GLIFOS))
+    GLIFOS.append(_v)
 _cache = {}
 
 def rgb(cor):
@@ -42,8 +52,35 @@ def _glifo(ch, fg, bg):
         _cache[chave] = s
     return s
 
+def para_glifos(s):
+    """Texto Unicode para indices de GLIFOS, um caractere por glifo.
+
+    A metade de cima da fonte segue a CP437 (o é e o ç estao la, mas em outro
+    numero que no Latin-1); depois vem a tabela extra. O que nao existe em
+    nenhuma das duas perde o acento, e o que nem assim existe, como emoji, sai.
+    """
+    r = []
+    for ch in s:
+        if ord(ch) < 32 or ord(ch) == 127:
+            continue
+        for tentativa in (ch, unicodedata.normalize('NFKD', ch)[:1]):
+            if tentativa in EXTRA:
+                r.append(EXTRA[tentativa])
+                break
+            try:
+                r.append(tentativa.encode('cp437').decode('latin1'))
+                break
+            except UnicodeEncodeError:
+                pass
+    return ''.join(r)
+
 def escreve(cr, col, lin, s, fg, bg):
-    """Escreve s a partir da celula (col, lin). Caracteres fora de latin-1 viram '?'."""
-    for i, ch in enumerate(s.encode('latin1', 'replace')):
-        cr.set_source_surface(_glifo(ch, fg, bg), (col + i) * C, lin * C)
+    """Escreve s a partir da celula (col, lin).
+
+    Cada caractere de s ja e o indice do glifo (ver para_glifos): assim os de
+    moldura, como o '\x02', passam direto. Indice que nao existe vira '?'.
+    """
+    for i, ch in enumerate(s):
+        n = ord(ch) if ord(ch) < len(GLIFOS) else ord('?')
+        cr.set_source_surface(_glifo(n, fg, bg), (col + i) * C, lin * C)
         cr.paint()

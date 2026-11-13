@@ -9,7 +9,7 @@ Clicar em qualquer lugar fecha e dispara a acao "default", se houver. Enquanto a
 tela esta bloqueada (selecao _TEMPLEOS_TRAVA, ver trava/trava.c) os avisos ficam
 na fila: o texto deles nao deve aparecer na tela de quem nao destravou.
 """
-import html, os, re, sys, textwrap, unicodedata, warnings
+import html, os, re, sys, textwrap, warnings
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
@@ -18,7 +18,7 @@ from gi.repository import Gtk, Gdk, Gio, GLib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import x11
 from doc import Doc, trecho, botao
-from texto import C, BLUE, RED, WHITE, LTBLUE, escreve
+from texto import C, BLUE, RED, WHITE, LTBLUE, escreve, para_glifos
 
 NOME = 'org.freedesktop.Notifications'
 CAMINHO = '/org/freedesktop/Notifications'
@@ -48,24 +48,6 @@ EXPIROU, DISPENSOU, PEDIRAM = 1, 2, 3   # motivos de NotificationClosed
 # glifos de moldura em linha simples (ver BORDAS em xfwm4/gerar-tema.py)
 H, V, SE, SD, IE, ID = '\x02', '\x04', '\x06', '\x08', '\x0a', '\x0c'
 
-def cp437(s):
-    """Unicode para o que escreve() desenha: a metade de cima da fonte e CP437.
-
-    O que nao existe nela perde o acento (a CP437 nao tem til, por exemplo) e o
-    que nem assim existe, como emoji, sai do texto.
-    """
-    r = []
-    for ch in s:
-        if ord(ch) < 32 or ord(ch) == 127:
-            continue
-        for tentativa in (ch, unicodedata.normalize('NFKD', ch)[:1]):
-            try:
-                r.append(tentativa.encode('cp437').decode('latin1'))
-                break
-            except UnicodeEncodeError:
-                pass
-    return ''.join(r)
-
 def sem_marcacao(s):
     # Nao anunciamos body-markup, mas alguns apps mandam mesmo assim
     return html.unescape(re.sub(r'<[^>]+>', '', s))
@@ -73,7 +55,7 @@ def sem_marcacao(s):
 def quebra(s, largura, maximo):
     linhas = []
     for par in s.split('\n'):
-        linhas += textwrap.wrap(cp437(par), largura) or ['']
+        linhas += textwrap.wrap(para_glifos(par), largura) or ['']
     while linhas and not linhas[-1]:
         linhas.pop()
     if len(linhas) > maximo:
@@ -107,7 +89,7 @@ class Aviso(Doc):
         self.set_skip_pager_hint(True)
         self.set_resizable(False)
 
-        titulo = ' %s ' % cp437(dados['app'] or 'Notification')[:COLS - 10]
+        titulo = ' %s ' % para_glifos(dados['app'] or 'Notification')[:COLS - 10]
         topo = [trecho(SE + H, LTBLUE), trecho(titulo, WHITE, fundo=RED if critico else LTBLUE),
                 trecho(H * (COLS - 6 - len(titulo)), LTBLUE),
                 trecho('[X]', LTBLUE, lambda: central.fecha(self, DISPENSOU)), trecho(SD, LTBLUE)]
@@ -120,7 +102,7 @@ class Aviso(Doc):
         if acoes:
             linha = [trecho(' ')]
             for chave, rotulo in acoes:
-                linha += [botao(cp437(rotulo)[:11],
+                linha += [botao(para_glifos(rotulo)[:11],
                                 lambda c=chave: central.aciona(self, c)), trecho(' ')]
             linhas += [[], linha, []]
         linhas.append([trecho(IE + H * (COLS - 2) + ID, LTBLUE)])

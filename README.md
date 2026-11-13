@@ -358,8 +358,24 @@ would fall through to the `other` policy and reject even the right password.
 
 Notification text can't go straight to the glyphs. The upper half of the
 TempleOS font follows CP437, so `é` drawn as a Latin-1 byte would come out as
-`Θ`. It goes through a conversion first. CP437 has no `ã`, so in Portuguese
-that one loses the tilde, and emoji just leave.
+`Θ`. It goes through a conversion first. Emoji just leave.
+
+CP437 has no `ã`, no `õ` and almost no accented capitals, and Terry was clear
+he didn't want more ("We do not want UTF, just 8-bit characters", in
+`Doc/Demands.DD`). In Portuguese that shows up everywhere: a window titled
+"Configuração" had the `ã` drawn by some other font, smaller, in the middle of
+the word. So `fonte/gerar-fonte.py` builds the missing ones out of Terry's own
+letters. A capital is squeezed from 7 rows to 5 by dropping rows that repeat
+their neighbor, which keeps the bars of the A and the E, and the accent goes
+in the two rows on top. Acute and grave take one row with a blank one under
+it, like the `É` and `Ñ` already in the font; the tilde and the circumflex
+need both rows. Curly quotes and the shorter dashes map to the straight ones,
+since 8x8 has no room for a curve. These live in `dados/fonte8x8-extra.json`,
+and the notifications use them too.
+
+If you update the font over an older install, `fc-cache` needs `-f`.
+Overwriting a file doesn't change the folder's date, so without it fontconfig
+decides nothing changed and keeps serving the old font.
 
 My first regex for finding DolDoc commands froze on the bigger files, with
 nested groups backtracking forever. A DolDoc command is simple enough for a
