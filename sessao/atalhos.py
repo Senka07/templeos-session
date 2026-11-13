@@ -9,13 +9,14 @@ TempleOS esta em toda janela -- aqui viram globais.
   Ctrl+Alt+N  proxima janela        Ctrl+Alt+M  liga/desliga o som
   Ctrl+Alt+S  captura de tela para a area de transferencia
   Ctrl+Alt+B  Biblia                Ctrl+Alt+A  tabela ASCII
+  Ctrl+Alt+Z  zoom (Shift diminui)
   (areas de trabalho: Ctrl+F1..F4 e Ctrl+Alt+setas sao do proprio xfwm4)
   Windows     menu da janela        Ctrl+M      PersonalMenu
   F7          God Word (digita a palavra na janela em foco)
   Shift+F7    God Passage           F6          God Song
 
 Nao implementados (nao tem equivalente util fora do TempleOS): Ctrl+Alt+C
-(break), D (depurador), F (fonte cirilica), V (VGA flush), G (grade), Z (zoom).
+(break), D (depurador), F (fonte cirilica), V (VGA flush), G (grade).
 
 Fora do original, os atalhos de programas de config/programas.json (os mesmos
 de uma sessao XFCE comum, que la quem dispara e o xfsettingsd; uma copia em
@@ -80,6 +81,27 @@ def captura():
     cb = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
     cb.set_image(pb)
     cb.store()
+
+LUPA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lupa.py')
+lupa = {'proc': None}
+
+def zoom(sinal):
+    """Ctrl+Alt+Z ('+') e Ctrl+Alt+Shift+Z ('-'), como em Adam/Gr/GrEnd.HC.
+
+    O lupa.py so existe enquanto ha zoom: o primeiro '+' o abre a 2x e os
+    seguintes vao pela entrada padrao dele. Ele sai sozinho ao voltar a 1x.
+    """
+    p = lupa['proc']
+    if p and p.poll() is None:
+        try:
+            p.stdin.write(sinal.encode())
+            p.stdin.flush()
+            return
+        except BrokenPipeError:
+            pass
+    if sinal == '+':
+        lupa['proc'] = subprocess.Popen([sys.executable, LUPA, '2'], stdin=subprocess.PIPE,
+                                        start_new_session=True, env=ambiente())
 
 def biblia():
     # +292: comeca no Velho Testamento, depois do cabecalho do Project Gutenberg.
@@ -424,6 +446,7 @@ def main():
         ('F7', 0): latch, ('F7', x11.SHIFT): passagem, ('F6', 0): hino,
         ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco, ('l', C_A): bloqueia,
         ('F1', x11.SUPER): ajuda,
+        ('z', C_A): lambda: zoom('+'), ('z', C_A | x11.SHIFT): lambda: zoom('-'),
     }
     for (ks, mods), cmd in le_programas().items():
         ao_apertar[(ks, mods)] = lambda cmd=cmd: roda(cmd)

@@ -68,6 +68,13 @@ TempleOS has no lock screen and no passwords, so this one is made of its
 windows: blue background, the status line clock, a double line window with a
 Bible passage picked by the oracle, and the password field.
 
+Ctrl+Alt+Z zooms the whole screen and Ctrl+Alt+Shift+Z zooms back out, the
+same as `Adam/Gr/GrEnd.HC`: 2x, 4x and 8x, hard pixels, centered on the mouse.
+Like the original, the view doesn't slide along with the mouse. It stays put
+until the pointer gets within 8 pixels of the edge and then jumps to center on
+it again (`WinMsUpdate` in `Adam/Win.HC`). The mouse keeps working on the real
+screen underneath, so you can click and type while zoomed.
+
 There are four workspaces named C:, D:, E: and F: in the status line. TempleOS
 doesn't have workspaces, but I needed them.
 
@@ -130,6 +137,7 @@ DolDoc editor, which is in every window; here they are global.
 | Ctrl+Alt+S | screenshot to the clipboard |
 | Ctrl+Alt+B | the Bible, from Genesis |
 | Ctrl+Alt+A | ASCII table in the TempleOS font |
+| Ctrl+Alt+Z | zoom in (2x, 4x, 8x); with Shift, zoom out |
 | Super (tap) | window menu |
 | Ctrl+M | show or hide the PersonalMenu |
 | F7 | God Word, typed into the focused window |
@@ -235,7 +243,8 @@ The code is in Portuguese, both names and comments, because it's my first
 language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
-glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader, and
+glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader,
+`lupa.py` the zoom, and
 `trava/` the screen locker.
 
 ## Rebuilding from the ISO
@@ -376,6 +385,19 @@ and the notifications use them too.
 If you update the font over an older install, `fc-cache` needs `-f`.
 Overwriting a file doesn't change the folder's date, so without it fontconfig
 decides nothing changed and keeps serving the old font.
+
+The zoom can't just read the screen and blow it up. Its own window covers the
+screen, so a capture of the screen would include the zoom itself, a mirror
+inside a mirror. With a compositor running, every top level window already
+has a pixmap of its own (the Composite extension), so `sessao/lupa.py` reads
+those instead, bottom to top, and lets the X server scale them with the Render
+extension and the "nearest" filter. Nothing comes back to Python, which is why
+it runs at 60 fps on a few percent of one core. Without a compositor it asks
+for automatic redirection, which gives every window a pixmap without changing
+what's on screen. The window has an empty input region, so clicks fall
+through to whatever is under them, and the real cursor is hidden while the
+zoom is on and drawn scaled, the way TempleOS draws it into the screen before
+zooming.
 
 My first regex for finding DolDoc commands froze on the bigger files, with
 nested groups backtracking forever. A DolDoc command is simple enough for a
