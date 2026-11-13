@@ -256,6 +256,13 @@ so it won't pick up the layout from XFCE), the locker fallback, the minutes
 before the screen locks by itself, and switches to let the monitor sleep, hide
 the last key indicator or start with the menu hidden.
 
+It also takes a list of processes to keep out of the task monitor on the
+wallpaper, `TEMPLEOS_ESCONDE="steam* discord"`. Whatever those programs
+started goes with them, so hiding a terminal hides the shells in it too. I
+added it because the monitor shows the busiest processes, and before a
+screenshot I kept having to close things I didn't want in the picture. The
+wallpaper reads the file again when it changes, so there's no need to log out.
+
 `menu.json` is the PersonalMenu. Each icon has a sprite from `dados/menu/`, a
 label and a command. Programs that aren't installed are left out of the menu,
 so the default list is fine to keep even if you don't use half of it. If you

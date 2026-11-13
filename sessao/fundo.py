@@ -18,9 +18,12 @@ Correspondencias com o original (as colunas e os formatos sao os mesmos):
   ContextSwaps/s          fatias de tempo por segundo da CPU (/proc/schedstat)
 
 Variaveis: TEMPLEOS_TERM (comando do terminal, padrao kitty),
-TEMPLEOS_TECLA=0 para nao mostrar a ultima tecla no topo.
+TEMPLEOS_TECLA=0 para nao mostrar a ultima tecla no topo,
+TEMPLEOS_ESCONDE com nomes de processo (curingas valem) que saem do monitor de
+tarefas junto com tudo o que eles abriram. Essa e relida do sessao.conf quando
+o arquivo muda, sem precisar sair da sessao.
 """
-import ctypes, glob, os, subprocess, sys, time, warnings
+import ctypes, fnmatch, glob, os, subprocess, sys, time, warnings
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
@@ -138,12 +141,63 @@ def processos():
         comm = s[s.find('(') + 1:i]
         c = s[i + 2:].split()
         try:
-            r[int(d[6:])] = dict(comm=comm, flags=int(c[6]), cpu_t=int(c[11]) + int(c[12]),
+            r[int(d[6:])] = dict(comm=comm, ppid=int(c[1]), flags=int(c[6]), cpu_t=int(c[11]) + int(c[12]),
                                  threads=int(c[17]), vsize=int(c[20]), rss=int(c[21]) * 4096,
                                  cpu=int(c[36]))
         except (IndexError, ValueError):
             pass
     return r
+
+class Escondidos:
+    """Quem nao aparece no monitor: TEMPLEOS_ESCONDE do sessao.conf.
+
+    O sessao.conf e shell (o sessao.sh da `.` nele), entao quem le e o proprio
+    sh, com as mesmas regras de aspas e variaveis. Isso so roda quando a data
+    do arquivo muda; sem o arquivo vale a variavel herdada do sessao.sh.
+    """
+    def __init__(self):
+        cfg = os.environ.get('TEMPLEOS_CFG') or os.path.expanduser('~/.config/templeos')
+        self.arquivo = os.path.join(cfg, 'sessao.conf')
+        self.data = None
+        self.nomes = self.separa(os.environ.get('TEMPLEOS_ESCONDE', ''))
+
+    @staticmethod
+    def separa(texto):
+        return [n for n in texto.replace(',', ' ').split() if n]
+
+    def confere(self):
+        try:
+            data = os.stat(self.arquivo).st_mtime_ns
+        except OSError:
+            return
+        if data == self.data:
+            return
+        self.data = data
+        try:
+            r = subprocess.run(['sh', '-c', 'TEMPLEOS_ESCONDE=; . "$1" >/dev/null 2>&1; '
+                                'printf %s "$TEMPLEOS_ESCONDE"', 'sh', self.arquivo],
+                               capture_output=True, text=True, timeout=2)
+            self.nomes = self.separa(r.stdout)
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    def filtra(self, procs):
+        """Tira de procs os processos com nome na lista e todos os descendentes."""
+        self.confere()
+        if not self.nomes:
+            return procs
+        fora = {pid for pid, p in procs.items()
+                if any(fnmatch.fnmatchcase(p['comm'], n) for n in self.nomes)}
+        filhos = {}
+        for pid, p in procs.items():
+            filhos.setdefault(p['ppid'], []).append(pid)
+        pilha_ = list(fora)
+        while pilha_:
+            for f in filhos.get(pilha_.pop(), ()):
+                if f not in fora:
+                    fora.add(f)
+                    pilha_.append(f)
+        return {pid: p for pid, p in procs.items() if pid not in fora}
 
 def wchans(pid):
     r = []
@@ -164,6 +218,7 @@ class Estado:
         self.cpu_antes, self.cpu_carga = tempos_cpu(), {i: 0 for i in range(NCPU)}
         self.fatias_antes, self.fatias_t = fatias_cpu(), time.monotonic()
         self.proc_antes = processos()
+        self.escondidos = Escondidos()
         self.linhas = []
 
     def amostra_cpu(self):
@@ -191,11 +246,12 @@ class Estado:
         L.append((WHITE, 'ProgressBars:%016X %016X %016X %016X' % (
             *(int(float(x) * 100) for x in load[:3]), rodando)))
         agora = processos()
+        visiveis = self.escondidos.filtra(agora)
         fatias, t = fatias_cpu(), time.monotonic()
         dt = max(t - self.fatias_t, 1e-3)
         for cpu in range(NCPU):
             daqui = [(p['cpu_t'] - self.proc_antes.get(pid, p)['cpu_t'], p['rss'], pid, p)
-                     for pid, p in agora.items() if p['cpu'] == cpu]
+                     for pid, p in visiveis.items() if p['cpu'] == cpu]
             daqui.sort(reverse=True)
             for _, _, pid, p in daqui[:TAREFAS_POR_CPU]:
                 L.append((YELLOW, '%-18s %-18s %-18s %-18s' % tuple((wchans(pid) + [''] * 4)[:4])))
