@@ -399,6 +399,19 @@ through to whatever is under them, and the real cursor is hidden while the
 zoom is on and drawn scaled, the way TempleOS draws it into the screen before
 zooming.
 
+Ctrl+Alt+Shift+Z couldn't get out of the zoom on a keyboard where Alt+Shift
+switches layouts (`grp:alt_shift_toggle`, a common setting for anyone with two
+layouts). With that option, whichever of Shift and Alt goes down second stops
+being a modifier and becomes `ISO_Next_Group`. Shift after Alt and the X
+server reports Ctrl+Alt+Z, which zooms in again; Alt after Shift and it
+reports Ctrl+Shift+Z, which the session didn't even grab. Either way the
+layout flips too. So the zoom asks which keys are physically down
+(`XQueryKeymap`) instead of trusting the modifiers, and puts the layout back
+the way it was at the last zoom step. Ctrl+Shift+Z is grabbed only while the
+zoom is on, and synchronously: the keyboard freezes for that one key press,
+and if Alt isn't down the press is handed back to the focused window
+(`XAllowEvents` with `ReplayKeyboard`), so redo still works in editors.
+
 My first regex for finding DolDoc commands froze on the bigger files, with
 nested groups backtracking forever. A DolDoc command is simple enough for a
 small hand written scanner: `$`, then anything up to the next `$` that's not

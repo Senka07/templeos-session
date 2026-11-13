@@ -83,7 +83,7 @@ def captura():
     cb.store()
 
 LUPA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lupa.py')
-lupa = {'proc': None}
+lupa = {'proc': None, 'grupo': None, 'ctrl_shift_z': None}
 
 def zoom(sinal):
     """Ctrl+Alt+Z ('+') e Ctrl+Alt+Shift+Z ('-'), como em Adam/Gr/GrEnd.HC.
@@ -91,6 +91,7 @@ def zoom(sinal):
     O lupa.py so existe enquanto ha zoom: o primeiro '+' o abre a 2x e os
     seguintes vao pela entrada padrao dele. Ele sai sozinho ao voltar a 1x.
     """
+    lupa['grupo'] = x11.grupo_teclado()
     p = lupa['proc']
     if p and p.poll() is None:
         try:
@@ -102,6 +103,49 @@ def zoom(sinal):
     if sinal == '+':
         lupa['proc'] = subprocess.Popen([sys.executable, LUPA, '2'], stdin=subprocess.PIPE,
                                         start_new_session=True, env=ambiente())
+        pega_ctrl_shift_z()
+        GLib.timeout_add(500, vigia_lupa)
+
+# Com a opcao grp:alt_shift_toggle (Alt+Shift troca o layout, a do XFCE), o
+# Shift apertado depois do Alt deixa de ser Shift: vira ISO_Next_Group, troca o
+# layout e Ctrl+Alt+Shift+Z chega como Ctrl+Alt+Z. Com o Shift antes, e o Alt
+# que vira ISO_Next_Group, e chega Ctrl+Shift+Z. Por isso o zoom olha as teclas
+# de verdade (XQueryKeymap) e desfaz a troca de layout que veio de brinde.
+SHIFTS = ('Shift_L', 'Shift_R')
+ALTS = ('Alt_L', 'Alt_R', 'Meta_L')
+
+def diminui_zoom():
+    if lupa['grupo'] is not None and x11.grupo_teclado() != lupa['grupo']:
+        x11.trava_grupo(lupa['grupo'])
+    zoom('-')
+
+def ctrl_alt_z():
+    if x11.apertadas(*SHIFTS):
+        diminui_zoom()
+    else:
+        zoom('+')
+
+def pega_ctrl_shift_z():
+    """So durante o zoom, e sincrono: se o Alt nao estiver apertado, a tecla
+    volta para a janela (o Ctrl+Shift+Z de refazer dos editores)."""
+    if not lupa['ctrl_shift_z']:
+        kc = x11.pega_tecla('z', x11.CTRL | x11.SHIFT, sincrono=True)
+        lupa['ctrl_shift_z'] = kc
+
+def ctrl_shift_z(tempo):
+    nosso = bool(lupa['proc'] and lupa['proc'].poll() is None and x11.apertadas(*ALTS))
+    x11.libera_teclado(not nosso, tempo)
+    if nosso:
+        diminui_zoom()
+
+def vigia_lupa():
+    p = lupa['proc']
+    if p and p.poll() is None:
+        return True
+    if lupa['ctrl_shift_z']:
+        x11.solta_tecla(lupa['ctrl_shift_z'], x11.CTRL | x11.SHIFT)
+        lupa['ctrl_shift_z'] = None
+    return False
 
 def biblia():
     # +292: comeca no Velho Testamento, depois do cabecalho do Project Gutenberg.
@@ -446,7 +490,7 @@ def main():
         ('F7', 0): latch, ('F7', x11.SHIFT): passagem, ('F6', 0): hino,
         ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco, ('l', C_A): bloqueia,
         ('F1', x11.SUPER): ajuda,
-        ('z', C_A): lambda: zoom('+'), ('z', C_A | x11.SHIFT): lambda: zoom('-'),
+        ('z', C_A): ctrl_alt_z, ('z', C_A | x11.SHIFT): diminui_zoom,
     }
     for (ks, mods), cmd in le_programas().items():
         ao_apertar[(ks, mods)] = lambda cmd=cmd: roda(cmd)
@@ -482,6 +526,10 @@ def main():
                 if ev.type == x11.KEYPRESS:
                     win['sozinho'] = False
                 mods = k.state & RELEVANTES
+                if (ev.type == x11.KEYPRESS and k.keycode == lupa['ctrl_shift_z']
+                        and mods == x11.CTRL | x11.SHIFT):
+                    ctrl_shift_z(k.time)
+                    continue
                 fn = por_tecla.get((ev.type, k.keycode, mods))
                 if fn:
                     try:

@@ -29,6 +29,10 @@ _f('XPending', c_int, [c_void_p])
 _f('XNextEvent', c_int, [c_void_p, c_void_p])
 _f('XSendEvent', c_int, [c_void_p, c_ulong, c_int, c_long, c_void_p])
 _f('XGrabKey', c_int, [c_void_p, c_int, c_uint, c_ulong, c_int, c_int, c_int])
+_f('XUngrabKey', c_int, [c_void_p, c_int, c_uint, c_ulong])
+_f('XAllowEvents', c_int, [c_void_p, c_int, c_ulong])
+_f('XkbGetState', c_int, [c_void_p, c_uint, c_void_p])
+_f('XkbLockGroup', c_int, [c_void_p, c_uint, c_uint])
 _f('XStringToKeysym', c_ulong, [c_char_p])
 _f('XKeysymToKeycode', c_ubyte, [c_void_p, c_ulong])
 _f('XKeysymToString', c_char_p, [c_ulong])
@@ -113,12 +117,53 @@ def keysym_nome(keycode):
     s = x11.XKeysymToString(x11.XkbKeycodeToKeysym(DPY, keycode, 0, 0))
     return s.decode() if s else ''
 
-def pega_tecla(keysym, mods):
-    """XGrabKey na raiz, repetido com NumLock e CapsLock para valer com eles ligados."""
-    kc = x11.XKeysymToKeycode(DPY, x11.XStringToKeysym(keysym.encode()))
+def keycode(keysym):
+    return x11.XKeysymToKeycode(DPY, x11.XStringToKeysym(keysym.encode()))
+
+def pega_tecla(keysym, mods, sincrono=False):
+    """XGrabKey na raiz, repetido com NumLock e CapsLock para valer com eles ligados.
+
+    Sincrono, o teclado congela a cada aperto ate o XAllowEvents: da tempo de
+    decidir se a tecla e nossa ou se volta para a janela (ReplayKeyboard).
+    """
+    kc = keycode(keysym)
     if not kc:
         return None
     for extra in (0, NUMLOCK, LOCK, NUMLOCK | LOCK):
-        x11.XGrabKey(DPY, kc, mods | extra, RAIZ, True, 1, 1)
+        x11.XGrabKey(DPY, kc, mods | extra, RAIZ, True, 1, 0 if sincrono else 1)
     x11.XSync(DPY, False)
     return kc
+
+def solta_tecla(kc, mods):
+    for extra in (0, NUMLOCK, LOCK, NUMLOCK | LOCK):
+        x11.XUngrabKey(DPY, kc, mods | extra, RAIZ)
+    x11.XSync(DPY, False)
+
+ASYNC_KEYBOARD, REPLAY_KEYBOARD = 3, 5
+
+def libera_teclado(devolve, tempo):
+    """Fecha um grab sincrono: REPLAY entrega a tecla a janela em foco."""
+    x11.XAllowEvents(DPY, REPLAY_KEYBOARD if devolve else ASYNC_KEYBOARD, tempo)
+    x11.XFlush(DPY)
+
+def apertadas(*keysyms):
+    """Se alguma dessas teclas esta fisicamente apertada agora (XQueryKeymap)."""
+    mapa = (c_char * 32)()
+    x11.XQueryKeymap(DPY, mapa)
+    for ks in keysyms:
+        kc = keycode(ks)
+        if kc and mapa.raw[kc >> 3] & (1 << (kc & 7)):
+            return True
+    return False
+
+XKB_TECLADO_PRINCIPAL = 0x100   # XkbUseCoreKbd
+
+def grupo_teclado():
+    """O layout travado agora (0 = o primeiro de setxkbmap -layout)."""
+    estado = (c_ubyte * 32)()   # XkbStateRec: group, locked_group, ...
+    x11.XkbGetState(DPY, XKB_TECLADO_PRINCIPAL, estado)
+    return estado[1]
+
+def trava_grupo(g):
+    x11.XkbLockGroup(DPY, XKB_TECLADO_PRINCIPAL, g)
+    x11.XFlush(DPY)
