@@ -34,7 +34,7 @@ gi.require_version('GdkX11', '3.0')
 from gi.repository import Gtk, Gdk, GdkX11, GLib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import x11, deus
+import x11, deus, bloqueio
 from doc import Doc, trecho, link, botao, sprite
 from texto import C, RAIZ, BLUE, GREEN, RED, WHITE, LTBLUE
 
@@ -389,34 +389,8 @@ def existe(cmd):
     return prog == '$TERM' or shutil.which(os.path.expanduser(prog)) is not None
 
 def bloqueia():
-    """Ctrl+Alt+L: trava/trava.c com uma passagem da Biblia na tela.
-
-    A reserva (a tela de login do LightDM) entra se o binario nao existir e se
-    ele sair com erro, inclusive se cair com a tela ja bloqueada. Em outro
-    gerenciador de login, ver TEMPLEOS_RESERVA_BLOQUEIO no sessao.conf.
-    """
-    reserva = os.environ.get('TEMPLEOS_RESERVA_BLOQUEIO') or 'dm-tool lock'
-    cfg = os.environ.get('TEMPLEOS_CFG') or os.path.expanduser('~/.config/templeos')
-    trava = os.path.join(cfg, 'trava')
-    if not os.access(trava, os.X_OK):
-        roda(reserva)
-        return
-    try:
-        oraculo.esvazia()
-        oraculo.insere()
-        ref, linhas = deus.passagem(oraculo, 16)
-        # A Biblia vem em linhas de ~70 colunas: a passagem cai no meio de uma
-        # frase. Na tela de bloqueio ela comeca no versiculo da referencia.
-        versiculo = ref.rsplit(' ', 1)[-1]
-        i = next((i for i, l in enumerate(linhas) if l.startswith(versiculo + ' ')), 0)
-        texto = '\n'.join([ref] + linhas[i:i + 6]) + '\n'
-    except Exception as e:  # sem passagem, mas nunca sem bloquear
-        print('passagem falhou:', e, file=sys.stderr)
-        texto = ''
-    p = subprocess.Popen('%s || %s' % (shlex.quote(trava), reserva), shell=True,
-                         stdin=subprocess.PIPE, start_new_session=True, env=ambiente())
-    p.stdin.write(texto.encode('cp437', 'replace'))
-    p.stdin.close()
+    """Ctrl+Alt+L: ver bloqueio.py (o protetor.py tambem bloqueia)."""
+    bloqueio.bloqueia(oraculo, ambiente())
 
 def sair():
     def confirma():

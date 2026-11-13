@@ -41,6 +41,8 @@ opcional less less "Ctrl+Alt+B Bible"
 opcional thunar thunar "Super+E file manager, with its own TempleOS theme"
 opcional gcc gcc "builds the screen locker and the module that themes Thunar"
 opcional dm-tool lightdm "Ctrl+Alt+L falls back to it if the locker fails; see sessao.conf"
+python3 -c "import ctypes; ctypes.CDLL('libXss.so.1')" 2>/dev/null || \
+  echo "  optional: libXss (libxss) - players holding the screen on, and TEMPLEOS_BLOQUEIO_MIN"
 [ -e /etc/pam.d/vlock ] || [ -e /usr/lib/pam.d/vlock ] || \
   echo "  optional: PAM service vlock (kbd on Arch, vlock elsewhere) - without it Ctrl+Alt+L uses the fallback"
 opcional qemu-system-x86_64 qemu-desktop "the TempleOS logo in the menu boots the real thing"

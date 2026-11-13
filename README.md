@@ -68,6 +68,13 @@ TempleOS has no lock screen and no passwords, so this one is made of its
 windows: blue background, the status line clock, a double line window with a
 Bible passage picked by the oracle, and the password field.
 
+The original has no screen saver either, so by default the screen never locks
+by itself. Set `TEMPLEOS_BLOQUEIO_MIN` in `sessao.conf` and it locks after that
+many minutes without keyboard or mouse. `sessao/protetor.py` owns
+`org.freedesktop.ScreenSaver`, so when Firefox, VLC or OBS ask the screen to
+stay on during a video, the countdown waits, and so does the monitor if you
+let it sleep. Flatpak apps get there too, through the desktop portal.
+
 Ctrl+Alt+Z zooms the whole screen and Ctrl+Alt+Shift+Z zooms back out, the
 same as `Adam/Gr/GrEnd.HC`: 2x, 4x and 8x, hard pixels, centered on the mouse.
 Like the original, the view doesn't slide along with the mouse. It stays put
@@ -184,7 +191,7 @@ Required (Arch names): `xfwm4`, `dbus`, `python`, `python-gobject`,
 
 Optional: `fastfetch`, `xsettingsd` (keeps the cursor the same in GTK apps),
 `xorg-setxkbmap`, `libpulse` (for the God Song audio), `wireplumber` (mute),
-`polkit-gnome`, `thunar`, `gcc` (builds the screen locker and the module that
+`polkit-gnome`, `libxss` (the screen saver service and the idle lock), `thunar`, `gcc` (builds the screen locker and the module that
 themes Thunar), and `qemu-desktop` if you want the TempleOS logo in the menu to boot the real
 thing.
 
@@ -232,9 +239,9 @@ Everything you'd want to change is in `~/.config/templeos/`. These files are
 copied there the first time and never overwritten after that.
 
 `sessao.conf` has the keyboard layout (the session doesn't run xfsettingsd,
-so it won't pick up the layout from XFCE), the locker fallback, and switches to
-let the monitor sleep, hide the last key indicator or start with the menu
-hidden.
+so it won't pick up the layout from XFCE), the locker fallback, the minutes
+before the screen locks by itself, and switches to let the monitor sleep, hide
+the last key indicator or start with the menu hidden.
 
 `menu.json` is the PersonalMenu. Each icon has a sprite from `dados/menu/`, a
 label and a command. Programs that aren't installed are left out of the menu,
@@ -254,8 +261,8 @@ language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
 glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader,
-`lupa.py` the zoom, `grade.py` the mouse grid, and
-`trava/` the screen locker.
+`lupa.py` the zoom, `grade.py` the mouse grid, `protetor.py` the screen saver
+service, and `bloqueio.py` plus `trava/` the screen locker.
 
 ## Rebuilding from the ISO
 
@@ -442,6 +449,18 @@ nested groups backtracking forever. A DolDoc command is simple enough for a
 small hand written scanner: `$`, then anything up to the next `$` that's not
 inside quotes. That scanner went through all 642 text files in the ISO without
 a failure, at 80 and 40 columns, with the trees open and closed.
+
+The idle lock doesn't keep a clock of its own. The X server already counts
+idle time for its built-in screen saver, so `protetor.py` sets that timeout
+and registers itself as an external screen saver with a 1x1 input-only window
+(`XScreenSaverSetAttributes`). When time runs out, X maps that invisible window
+instead of blanking the screen and sends a `ScreenSaverNotify`, and the
+locker starts. The reason to do it this way is that mpv, and SDL games on
+older SDL versions, skip D-Bus and call `XScreenSaverSuspend` on the X server
+directly, and a clock of my own would never know. A D-Bus `Inhibit()` turns into the
+same `XScreenSaverSuspend`, and every request is dropped when the app that
+made it leaves the bus, so a browser that crashes during a video doesn't keep
+the screen awake forever. On exit it puts back whatever `xset` had before.
 
 Log Out used to send SIGTERM to `getppid()`, because `sessao.sh` ends with an
 `exec` into xfwm4. Restart `atalhos.py` with the session running and the parent

@@ -21,7 +21,7 @@ export TEMPLEOS_TERM="kitty --config '$CFG/kitty.conf'"
 
 # Ajustes locais (teclado, ultima tecla, menu): ver config/sessao.conf.
 [ -f "$CFG/sessao.conf" ] && . "$CFG/sessao.conf"
-export TEMPLEOS_TECLA TEMPLEOS_MENU_INICIAL TEMPLEOS_RESERVA_BLOQUEIO
+export TEMPLEOS_TECLA TEMPLEOS_MENU_INICIAL TEMPLEOS_RESERVA_BLOQUEIO TEMPLEOS_BLOQUEIO_MIN
 
 # Teclado: no XFCE quem aplica o layout e o xfsettingsd, que aqui nao roda.
 # Precisa vir antes do atalhos.py, que traduz as teclas pelo mapa atual.
@@ -55,6 +55,11 @@ done
 # Notificacoes no estilo da sessao. Antes de qualquer app, senao o D-Bus ativa o
 # notifyd instalado na primeira notificacao.
 python3 "$D/avisos.py" &
+
+# org.freedesktop.ScreenSaver: os pedidos de "nao apague a tela" dos players e
+# o bloqueio por inatividade (TEMPLEOS_BLOQUEIO_MIN). Depois do xset acima, que
+# ele guarda e devolve ao sair, e antes dos apps, que perguntam por ele uma vez.
+python3 "$D/protetor.py" &
 
 # Thunar ja como daemon: toda janela dele (Windows+E, menu, "abrir pasta"
 # pedido por outro app via D-Bus) sai deste processo, que tem o tema TempleOS.
