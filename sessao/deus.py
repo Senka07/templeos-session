@@ -11,8 +11,9 @@ tecla chega.
   Shift+F7  GodBiblePassage: 20 linhas da Biblia a partir de uma linha (21 bits)
   F6        GodSong: dois compassos x2 + dois compassos x2, notacao do Play()
 """
-import os, struct, subprocess, threading, time
+import os, time
 from collections import deque
+from musica import Musica
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOD_BAD_BITS, GOD_GOOD_BITS = 4, 24
@@ -162,75 +163,9 @@ def hino(oraculo):
     return a + a + b + b
 
 # ---------------------------------------------------------------- Play() e o PC speaker
-TAXA = 44100
-MAPA = [0, 2, 3, 5, 7, 8, 10]
+# O motor do Play() mora em musica.py (o JukeBox usa o mesmo); aqui ficam os
+# nomes antigos.
+from musica import TAXA, onda, toca
 
 def notas(st):
-    """Interpreta a notacao do Play(): (frequencia, ligada_s, desligada_s, ligadura)."""
-    oitava, dur, tempo, staccato = 4, 1.0, 2.5, 0.9
-    i, r = 0, []
-    while i < len(st):
-        liga = False
-        while True:
-            antes = i
-            if st[i] == '(':
-                liga = True; i += 1
-            else:
-                while i < len(st) and st[i] == 'M':
-                    i += 1
-                    while i < len(st) and (st[i].isdigit() or st[i] == '/'):
-                        i += 1
-                while i < len(st) and st[i].isdigit():
-                    oitava = int(st[i]); i += 1
-                while i < len(st) and st[i] in 'whqest.':
-                    dur = {'w': 4.0, 'h': 2.0, 'q': 1.0, 'e': 0.5, 's': 0.25,
-                           't': 2.0 * dur / 3.0, '.': 1.5 * dur}[st[i]]
-                    i += 1
-            if i == antes or i >= len(st):
-                break
-        if i >= len(st):
-            break
-        n = ord(st[i]) - ord('A'); i += 1
-        ona = 0
-        if 0 <= n < 7:
-            n, o = MAPA[n], oitava
-            if i < len(st) and st[i] == 'b':
-                n -= 1; i += 1
-                if n == 2: o -= 1
-            elif i < len(st) and st[i] == '#':
-                n += 1; i += 1
-                if n == 3: o += 1
-            ona = (o + 1) * 12 + n if n < 3 else o * 12 + n
-        freq = 440.0 / 32 * 2 ** (ona / 12.0) if ona else 0.0
-        d = dur / tempo
-        r.append((freq, d * staccato, d * (1 - staccato), liga))
-    return r
-
-def onda(st, volume=0.12):
-    """Onda quadrada, como o Snd() programando o PIT do alto-falante do PC."""
-    amostras = bytearray()
-    a = int(32767 * volume)
-    fase = 0.0
-    for freq, on, off, liga in notas(st):
-        for dur, soa in ((on, True), (off, liga)):
-            n = int(dur * TAXA)
-            if soa and freq:
-                passo = freq / TAXA
-                for _ in range(n):
-                    amostras += struct.pack('<h', a if fase < 0.5 else -a)
-                    fase = (fase + passo) % 1.0
-            else:
-                amostras += bytes(2 * n)
-    return bytes(amostras)
-
-def toca(st):
-    """Toca em segundo plano pelo PipeWire/PulseAudio (paplay le PCM cru da entrada)."""
-    def tarefa():
-        try:
-            p = subprocess.Popen(['paplay', '--raw', '--format=s16le', '--rate=%d' % TAXA,
-                                  '--channels=1'], stdin=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL)
-            p.communicate(onda(st))
-        except OSError:
-            pass
-    threading.Thread(target=tarefa, daemon=True).start()
+    return Musica().notas(st)

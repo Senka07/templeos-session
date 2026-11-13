@@ -34,7 +34,7 @@ gi.require_version('GdkX11', '3.0')
 from gi.repository import Gtk, Gdk, GdkX11, GLib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import x11, deus, bloqueio
+import x11, deus, bloqueio, psalmody
 from doc import Doc, trecho, link, botao, sprite
 from texto import C, RAIZ, BLUE, GREEN, RED, WHITE, LTBLUE
 
@@ -468,12 +468,30 @@ def hino():
 
 def mostra_hino(st):
     pedacos = [st[i:i + 60] for i in range(0, len(st), 60)]
+    salvar = link('<Save>', lambda: salva())
     d = Doc('God Song', 64, len(pedacos) + 4,
-            [[], [trecho(' '), link('<Song>', lambda: deus.toca(st))], []] +
+            [[], [trecho(' '), link('<Song>', lambda: deus.toca(st)), trecho('  '), salvar], []] +
             [[trecho(' ' + p, GREEN)] for p in pedacos])
+
+    def salva():
+        """Vai para a pasta do JukeBox como uma cancao do Psalmody."""
+        if salvar['acao'] is None:
+            return
+        try:
+            nome = psalmody.salva_hino(st)
+        except OSError as e:
+            salvar.update(t='<Save failed: %s>' % e.strerror)
+            d.queue_draw()
+            return
+        salvar.update(t='Saved as %s' % nome, fg=BLUE, sub=False, acao=None)
+        d.queue_draw()
     d.ao_enter = lambda: deus.toca(st)
     d.show_all()
     deus.toca(st)
+
+def jukebox():
+    # Processo proprio, como o leitor; uma instancia so (Gtk.Application)
+    roda('python3 %s' % shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'jukebox.py')))
 
 def ascii():
     linhas = [[], [trecho('     ' + ' '.join('%X' % c for c in range(16)))], []]
@@ -486,7 +504,7 @@ def ajuda():
     # Processo proprio: um documento que derrube o leitor nao leva os atalhos junto
     roda('python3 %s' % shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'leitor.py')))
 
-ACOES = dict(ajuda=ajuda, hino=hino, passagem=passagem, ascii=ascii, biblia=biblia, sair=sair)
+ACOES = dict(ajuda=ajuda, hino=hino, jukebox=jukebox, passagem=passagem, ascii=ascii, biblia=biblia, sair=sair)
 
 # ---------------------------------------------------------------- PersonalMenu
 class PersonalMenu(Doc):

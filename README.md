@@ -42,6 +42,19 @@ types a word into whatever window is focused, Shift+F7 opens a Bible passage
 and F6 does the God Song dialog (Timer, Latch, OKAY) and then plays the hymn
 as a square wave.
 
+The JukeBox icon in the PersonalMenu opens the hymn player from
+`Apps/Psalmody/JukeBox.HC`. It lists the songs in
+`~/.local/share/templeos/Psalmody`, which starts out with the three examples
+from the ISO plus `OhGreat` from `Demo/Snd`, each in the color of its category
+and with its rating in front of the name. Pick one and it plays in a small
+window with the words coming up note by note, over and over until you close it
+or pick another. 0 to 9 rates the song, Delete removes it (to the trash; the
+original just deletes it) and r asks God for your reward: lines of four God
+words saved inside the song file, which show up in a red window next to the
+song every time it plays. The God Song dialog has a `<Save>` link that puts
+the hymn in the same folder as `God1`, `God2` and so on, in the format
+Psalmody itself writes.
+
 Thunar (Super+E) gets a theme of its own, modeled on the TempleOS file
 manager (`Adam/ABlkDev/FileMgr.HC`) and the DolDoc documents: white
 background, blue text, light blue lines, the selection drawn inverted, purple
@@ -190,7 +203,7 @@ Required (Arch names): `xfwm4`, `dbus`, `python`, `python-gobject`,
 `xorg-xrdb`, `xorg-xcursorgen`.
 
 Optional: `fastfetch`, `xsettingsd` (keeps the cursor the same in GTK apps),
-`xorg-setxkbmap`, `libpulse` (for the God Song audio), `wireplumber` (mute),
+`xorg-setxkbmap`, `libpulse` (for the God Song and JukeBox audio), `wireplumber` (mute),
 `polkit-gnome`, `libxss` (the screen saver service and the idle lock), `thunar`, `gcc` (builds the screen locker and the module that
 themes Thunar), and `qemu-desktop` if you want the TempleOS logo in the menu to boot the real
 thing.
@@ -245,7 +258,10 @@ the last key indicator or start with the menu hidden.
 
 `menu.json` is the PersonalMenu. Each icon has a sprite from `dados/menu/`, a
 label and a command. Programs that aren't installed are left out of the menu,
-so the default list is fine to keep even if you don't use half of it.
+so the default list is fine to keep even if you don't use half of it. If you
+installed before the JukeBox existed, your copy still has Audacious on the
+JukeBox sprite; change that line to
+`{"sprite": "JukeBox.png", "rotulo": "JukeBox", "acao": "jukebox"}`.
 
 `programas.json` is the program shortcuts, as `"Ctrl+Alt+F": "thunar"`.
 
@@ -259,6 +275,8 @@ writes over it.
 The code is in Portuguese, both names and comments, because it's my first
 language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
+`musica.py` the `Play()` engine, `jukebox.py` and `psalmody.py` the JukeBox
+and its song files,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
 glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader,
 `lupa.py` the zoom, `grade.py` the mouse grid, `protetor.py` the screen saver
@@ -462,6 +480,21 @@ same `XScreenSaverSuspend`, and every request is dropped when the app that
 made it leaves the bus, so a browser that crashes during a video doesn't keep
 the screen awake forever. On exit it puts back whatever `xset` had before.
 
+The songs are HolyC programs and there's no HolyC compiler here, so
+`sessao/psalmody.py` reads only what songs actually use: `Play()`, strings
+printed on their own, `music.tempo`, `music.stacatto_factor`,
+`MusicSettingsRst`, `Fs->text_attr` and the loop. The octave and the note
+length live in the global `music` in the original and carry over from one
+`Play()` to the next (the second line of `OhGreat` starts with `5G` and no
+length, so that G is a half note held over from the `hE` that ends the line
+before), so `sessao/musica.py` keeps one state for the whole song. The words that look empty in the song files aren't:
+Psalmody writes 0x1F, `CH_SHIFT_SPACE`, for a note with no word, and TempleOS
+prints it as a space. That's why the second line of a verse starts a few
+columns in, here and in the original. The words are timed against the sound:
+a thread writes the square wave to `pacat` at most 120 ms ahead of the clock,
+and each word shows up when its note starts, plus the 50 ms of buffer pacat is
+asked to keep.
+
 Log Out used to send SIGTERM to `getppid()`, because `sessao.sh` ends with an
 `exec` into xfwm4. Restart `atalhos.py` with the session running and the parent
 is something else entirely. Now `sessao.sh` exports its own PID before the
@@ -485,6 +518,12 @@ aren't drawn. It leaves out `Adam/God/HSNotes.DD` and
 the 5674 links are broken because they point to files that aren't in the ISO.
 
 Notifications only show text: no icons, and no sounds.
+
+The JukeBox plays the songs and shows their words and colors, but the
+"has graphics" songs don't get their graphics (the candle in `night`, the
+sheep in `prosper`), since that's HolyC drawing code. A song of your own that
+uses more HolyC than `Play()` and printing, like variables or `if`, won't play
+right either.
 
 The locker has the limits of any X11 locker: Ctrl+Alt+Backspace (if you enabled
 it) ends the session and Ctrl+Alt+F2 switches to a console. With two monitors

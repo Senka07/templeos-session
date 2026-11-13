@@ -1,5 +1,5 @@
 {
-  "_comment": "PersonalMenu. sprite: file in dados/menu. cmd: shell command ($TERM is the session terminal); entries whose program is not installed are hidden. acao: hino (God Song) | passagem (God Passage) | ascii | biblia (Bible) | sair (Log Out). Edit the copy in ~/.config/templeos/.",
+  "_comment": "PersonalMenu. sprite: file in dados/menu. cmd: shell command ($TERM is the session terminal); entries whose program is not installed are hidden. acao: hino (God Song) | jukebox (hymns) | passagem (God Passage) | ascii | biblia (Bible) | sair (Log Out). Edit the copy in ~/.config/templeos/.",
   "cabecalho": {"sprite": "TempleOS.png", "cmd": "qemu-system-x86_64 -accel kvm -accel tcg -m 1024 -smp 2 -cdrom \"$TEMPLEOS_RAIZ/iso/TempleOS.ISO\" -boot d -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -name TempleOS"},
   "icones": [
     {"sprite": "Term.png",      "rotulo": "Term",      "cmd": "$TERM"},
@@ -10,7 +10,7 @@
     {"sprite": "Talons.png",    "rotulo": "Discord",   "cmd": "discord"},
     {"sprite": "Digits.png",    "rotulo": "Krita",     "cmd": "krita"},
     {"sprite": "Budget.png",    "rotulo": "Calc",      "cmd": "libreoffice --calc"},
-    {"sprite": "JukeBox.png",   "rotulo": "Audacious", "cmd": "audacious"},
+    {"sprite": "JukeBox.png",   "rotulo": "JukeBox",   "acao": "jukebox"},
     {"sprite": "XCaliber.png",  "rotulo": "VLC",       "cmd": "vlc"},
     {"sprite": "BigGuns.png",   "rotulo": "OBS",       "cmd": "obs"},
     {"sprite": "Logic.png",     "rotulo": "btop",      "cmd": "$TERM btop"},
