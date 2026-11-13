@@ -75,6 +75,15 @@ until the pointer gets within 8 pixels of the edge and then jumps to center on
 it again (`WinMsUpdate` in `Adam/Win.HC`). The mouse keeps working on the real
 screen underneath, so you can click and type while zoomed.
 
+Ctrl+Alt+G opens the grid form from `Adam/Win.HC`, the same fields as the
+`CGridGlbls` class: Snap Grid, Show Grid, Show Coordinates, spacing, offset and
+mouse speed. Esc saves and Shift+Esc cancels, like every DolDoc form, and
+Ctrl+Alt+Shift+G turns it all off again (`GridInit`). The numbers are TempleOS
+pixels, so a spacing of 8 is 16 screen pixels, one character cell of the 2x
+windows, and the coordinates go up to 639 on a 1280 wide screen. With Snap Grid
+on the pointer only stops on grid points, and the zoom magnifies the grid along
+with everything else.
+
 There are four workspaces named C:, D:, E: and F: in the status line. TempleOS
 doesn't have workspaces, but I needed them.
 
@@ -138,6 +147,7 @@ DolDoc editor, which is in every window; here they are global.
 | Ctrl+Alt+B | the Bible, from Genesis |
 | Ctrl+Alt+A | ASCII table in the TempleOS font |
 | Ctrl+Alt+Z | zoom in (2x, 4x, 8x); with Shift, zoom out |
+| Ctrl+Alt+G | mouse grid form; with Shift, grid off |
 | Super (tap) | window menu |
 | Ctrl+M | show or hide the PersonalMenu |
 | F7 | God Word, typed into the focused window |
@@ -244,7 +254,7 @@ language. The file names map like this: `fundo.py` is the wallpaper,
 `atalhos.py` the shortcuts and menu, `deus.py` the oracle and the hymn,
 `doc.py` the DolDoc-style windows, `texto.py` draws text straight from the
 glyphs, `avisos.py` is notifications, `doldoc.py` and `leitor.py` the help reader,
-`lupa.py` the zoom, and
+`lupa.py` the zoom, `grade.py` the mouse grid, and
 `trava/` the screen locker.
 
 ## Rebuilding from the ISO
@@ -411,6 +421,21 @@ the way it was at the last zoom step. Ctrl+Shift+Z is grabbed only while the
 zoom is on, and synchronously: the keyboard freezes for that one key press,
 and if Alt isn't down the press is handed back to the focused window
 (`XAllowEvents` with `ReplayKeyboard`), so redo still works in editors.
+Ctrl+Alt+Shift+G had the same problem and uses the same fix.
+
+TempleOS snaps the mouse by keeping two positions, the real one
+(`ms.presnap`) and the rounded one everybody sees (`ms.pos`). X has only one
+pointer, so `sessao/grade.py` keeps the real position itself and moves the
+pointer to the grid point with `XWarpPointer`. It wakes up on XInput2 raw
+motion events, adds what the pointer moved since the last warp to the real
+position, and warps relative to where the pointer is now, so a movement that
+arrives between reading and warping isn't lost. The grid itself is a
+transparent window with an empty input region, kept on top. While the form is
+open the grid has a hole where the form is: in TempleOS window text sits on
+the 8 pixel grid and the lines fall between the letters, here they cut right
+through them. I first tried stacking the grid under the form, and the X
+server agreed, but xfwm4's compositor kept painting the grid on top until the
+form moved.
 
 My first regex for finding DolDoc commands froze on the bigger files, with
 nested groups backtracking forever. A DolDoc command is simple enough for a

@@ -10,13 +10,14 @@ TempleOS esta em toda janela -- aqui viram globais.
   Ctrl+Alt+S  captura de tela para a area de transferencia
   Ctrl+Alt+B  Biblia                Ctrl+Alt+A  tabela ASCII
   Ctrl+Alt+Z  zoom (Shift diminui)
+  Ctrl+Alt+G  grade do mouse (Shift desliga)
   (areas de trabalho: Ctrl+F1..F4 e Ctrl+Alt+setas sao do proprio xfwm4)
   Windows     menu da janela        Ctrl+M      PersonalMenu
   F7          God Word (digita a palavra na janela em foco)
   Shift+F7    God Passage           F6          God Song
 
 Nao implementados (nao tem equivalente util fora do TempleOS): Ctrl+Alt+C
-(break), D (depurador), F (fonte cirilica), V (VGA flush), G (grade).
+(break), D (depurador), F (fonte cirilica), V (VGA flush).
 
 Fora do original, os atalhos de programas de config/programas.json (os mesmos
 de uma sessao XFCE comum, que la quem dispara e o xfsettingsd; uma copia em
@@ -35,7 +36,7 @@ from gi.repository import Gtk, Gdk, GdkX11, GLib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import x11, deus
 from doc import Doc, trecho, link, botao, sprite
-from texto import C, RAIZ, BLUE, GREEN, RED, WHITE
+from texto import C, RAIZ, BLUE, GREEN, RED, WHITE, LTBLUE
 
 TERMINAL = os.environ.get('TEMPLEOS_TERM', 'kitty')
 oraculo = deus.Oraculo()
@@ -82,8 +83,48 @@ def captura():
     cb.set_image(pb)
     cb.store()
 
+# Com a opcao grp:alt_shift_toggle (Alt+Shift troca o layout, a do XFCE), o
+# Shift apertado depois do Alt deixa de ser Shift: vira ISO_Next_Group, troca o
+# layout e Ctrl+Alt+Shift+Z chega como Ctrl+Alt+Z. Com o Shift antes, e o Alt
+# que vira ISO_Next_Group, e chega Ctrl+Shift+Z. Por isso os atalhos com Shift
+# (zoom e grade) olham as teclas de verdade (XQueryKeymap) e desfazem a troca de
+# layout que veio de brinde.
+SHIFTS = ('Shift_L', 'Shift_R')
+ALTS = ('Alt_L', 'Alt_R', 'Meta_L')
+SINCRONAS = {}   # keycode -> tratador(tempo) dos Ctrl+Shift+tecla pegos por enquanto
+
+def pega_sincrona(ks, ligado, acao):
+    """Ctrl+Shift+ks enquanto ligado(), num grab sincrono: o teclado congela no
+    aperto ate decidirmos. Com o Alt fisicamente apertado o aperto e nosso;
+    sem ele, a tecla volta para a janela (o Ctrl+Shift+Z de refazer)."""
+    kc = x11.keycode(ks)
+    if not kc or kc in SINCRONAS:
+        return
+    x11.pega_tecla(ks, x11.CTRL | x11.SHIFT, sincrono=True)
+
+    def trata(tempo):
+        nosso = bool(ligado() and x11.apertadas(*ALTS))
+        x11.libera_teclado(not nosso, tempo)
+        if nosso:
+            acao()
+    SINCRONAS[kc] = trata
+
+def solta_sincrona(ks):
+    kc = x11.keycode(ks)
+    if kc in SINCRONAS:
+        x11.solta_tecla(kc, x11.CTRL | x11.SHIFT)
+        del SINCRONAS[kc]
+
+def volta_layout(grupo):
+    if grupo is not None and x11.grupo_teclado() != grupo:
+        x11.trava_grupo(grupo)
+
+def vivo(p):
+    return bool(p and p.poll() is None)
+
+# ---------------------------------------------------------------- zoom
 LUPA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lupa.py')
-lupa = {'proc': None, 'grupo': None, 'ctrl_shift_z': None}
+lupa = {'proc': None, 'grupo': None}
 
 def zoom(sinal):
     """Ctrl+Alt+Z ('+') e Ctrl+Alt+Shift+Z ('-'), como em Adam/Gr/GrEnd.HC.
@@ -93,7 +134,7 @@ def zoom(sinal):
     """
     lupa['grupo'] = x11.grupo_teclado()
     p = lupa['proc']
-    if p and p.poll() is None:
+    if vivo(p):
         try:
             p.stdin.write(sinal.encode())
             p.stdin.flush()
@@ -103,20 +144,11 @@ def zoom(sinal):
     if sinal == '+':
         lupa['proc'] = subprocess.Popen([sys.executable, LUPA, '2'], stdin=subprocess.PIPE,
                                         start_new_session=True, env=ambiente())
-        pega_ctrl_shift_z()
+        pega_sincrona('z', lambda: vivo(lupa['proc']), diminui_zoom)
         GLib.timeout_add(500, vigia_lupa)
 
-# Com a opcao grp:alt_shift_toggle (Alt+Shift troca o layout, a do XFCE), o
-# Shift apertado depois do Alt deixa de ser Shift: vira ISO_Next_Group, troca o
-# layout e Ctrl+Alt+Shift+Z chega como Ctrl+Alt+Z. Com o Shift antes, e o Alt
-# que vira ISO_Next_Group, e chega Ctrl+Shift+Z. Por isso o zoom olha as teclas
-# de verdade (XQueryKeymap) e desfaz a troca de layout que veio de brinde.
-SHIFTS = ('Shift_L', 'Shift_R')
-ALTS = ('Alt_L', 'Alt_R', 'Meta_L')
-
 def diminui_zoom():
-    if lupa['grupo'] is not None and x11.grupo_teclado() != lupa['grupo']:
-        x11.trava_grupo(lupa['grupo'])
+    volta_layout(lupa['grupo'])
     zoom('-')
 
 def ctrl_alt_z():
@@ -125,27 +157,180 @@ def ctrl_alt_z():
     else:
         zoom('+')
 
-def pega_ctrl_shift_z():
-    """So durante o zoom, e sincrono: se o Alt nao estiver apertado, a tecla
-    volta para a janela (o Ctrl+Shift+Z de refazer dos editores)."""
-    if not lupa['ctrl_shift_z']:
-        kc = x11.pega_tecla('z', x11.CTRL | x11.SHIFT, sincrono=True)
-        lupa['ctrl_shift_z'] = kc
-
-def ctrl_shift_z(tempo):
-    nosso = bool(lupa['proc'] and lupa['proc'].poll() is None and x11.apertadas(*ALTS))
-    x11.libera_teclado(not nosso, tempo)
-    if nosso:
-        diminui_zoom()
-
 def vigia_lupa():
-    p = lupa['proc']
-    if p and p.poll() is None:
+    if vivo(lupa['proc']):
         return True
-    if lupa['ctrl_shift_z']:
-        x11.solta_tecla(lupa['ctrl_shift_z'], x11.CTRL | x11.SHIFT)
-        lupa['ctrl_shift_z'] = None
+    solta_sincrona('z')
     return False
+
+# ---------------------------------------------------------------- grade
+GRADE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'grade.py')
+# GridInit (Kernel/SerialDev/Mouse.HC); os numeros sao pixels do TempleOS.
+# Igual ao PADRAO do grade.py, que nao e importado aqui para uma falta da
+# libXi la nao derrubar os atalhos todos.
+GRADE_PADRAO = dict(snap=False, show=False, coord=False, x=8.0, y=8.0,
+                    x_offset=0.0, y_offset=0.0, x_speed=1.0, y_speed=1.0)
+grade = {'proc': None, 'cfg': dict(GRADE_PADRAO), 'grupo': None, 'form': None}
+# Os campos de CGridGlbls (Kernel/KernelA.HH), na ordem e com os rotulos do
+# original. ZSpacing, ZOffset e ZSpeed ficaram de fora: o z e a roda do mouse.
+CAMPOS_GRADE = [('snap', 'Snap Grid'), ('show', 'Show Grid'), ('coord', 'Show Coordinates'),
+                ('x', 'XSpacing:'), ('y', 'YSpacing:'), ('x_offset', 'XOffset:'),
+                ('y_offset', 'YOffset:'), ('x_speed', 'XSpeed:'), ('y_speed', 'YSpeed:')]
+
+def grade_ligada(cfg):
+    return (cfg['snap'] or cfg['show'] or cfg['coord']
+            or cfg['x_speed'] != 1 or cfg['y_speed'] != 1)
+
+def aplica_grade():
+    """O grade.py so existe enquanto algo da grade esta ligado; cada mudanca vai
+    como uma linha JSON pela entrada dele, e fechar a entrada o encerra."""
+    cfg = grade['cfg']
+    grade['grupo'] = x11.grupo_teclado()
+    p = grade['proc']
+    if not grade_ligada(cfg):
+        if vivo(p):
+            p.stdin.close()
+        solta_sincrona('g')
+        return
+    if not vivo(p):
+        grade['proc'] = subprocess.Popen([sys.executable, GRADE], stdin=subprocess.PIPE,
+                                         start_new_session=True, env=ambiente())
+        pega_sincrona('g', lambda: vivo(grade['proc']), desliga_grade)
+        GLib.timeout_add(500, vigia_grade)
+    avisa_grade(cfg)
+
+def avisa_grade(dados):
+    p = grade['proc']
+    if vivo(p):
+        try:
+            p.stdin.write((json.dumps(dados) + '\n').encode())
+            p.stdin.flush()
+        except (BrokenPipeError, ValueError):   # ValueError: a entrada ja foi fechada
+            pass
+
+def vigia_grade():
+    if vivo(grade['proc']):
+        return True
+    solta_sincrona('g')
+    return False
+
+def desliga_grade():
+    """Ctrl+Alt+Shift+G: WinGrid(OFF), que chama GridInit."""
+    volta_layout(grade['grupo'])
+    if grade['form']:
+        grade['form'].destroy()
+    grade['cfg'] = dict(GRADE_PADRAO)
+    aplica_grade()
+
+def ctrl_alt_g():
+    if x11.apertadas(*SHIFTS):
+        desliga_grade()
+    elif grade['form']:
+        grade['form'].present()
+    else:
+        grade['form'] = FormGrade()
+        grade['form'].show_all()
+        avisa_grade({'formulario': grade['form'].get_window().get_xid()})
+
+class FormGrade(Doc):
+    """O PopUpForm(&ms_grid) de WinGrid(ON): Esc grava e Shift+Esc desiste,
+    como todo formulario DolDoc (DocForm em Adam/DolDoc/DocForm.HC).
+
+    Setas, Tab ou clique escolhem o campo; espaco ou clique marcam a caixa;
+    nos numeros, a primeira tecla apaga o valor e comeca um novo.
+    """
+    def __init__(self):
+        self.valores = dict(grade['cfg'])
+        self.foco = 0
+        self.editando = None        # texto do numero sendo digitado
+        super().__init__('Grid', 28, len(CAMPOS_GRADE) + 7)
+        self.ao_enter = self.grava
+        self.ao_fechar = self.fechou
+        self.monta()
+
+    def monta(self):
+        linhas = [[]]
+        for i, (chave, rotulo) in enumerate(CAMPOS_GRADE):
+            v = self.valores[chave]
+            if isinstance(v, bool):
+                t = ('[X] ' if v else '[ ] ') + rotulo
+            elif i == self.foco and self.editando is not None:
+                t = '%s%s_' % (rotulo, self.editando)
+            else:
+                t = '%s%6.3f' % (rotulo, v)
+            fg, bg = (WHITE, BLUE) if i == self.foco else (BLUE, WHITE)
+            linhas.append([trecho(' '), trecho(t, fg, lambda i=i: self.clica(i), bg)])
+        linhas += [[], [], [trecho('  '), botao('OKAY', self.grava), trecho('  '),
+                            botao('CANCEL', self.destroy)], [],
+                   [trecho(' Esc:Save  Shift+Esc:Cancel', LTBLUE)]]
+        self.conteudo = linhas
+        self.queue_draw()
+
+    def fechou(self):
+        grade['form'] = None
+        avisa_grade({'formulario': False})
+
+    def fecha_numero(self):
+        if self.editando is None:
+            return
+        chave = CAMPOS_GRADE[self.foco][0]
+        try:
+            self.valores[chave] = float(self.editando)
+        except ValueError:
+            pass                    # nao era numero: fica o valor de antes
+        self.editando = None
+
+    def vai(self, i):
+        self.fecha_numero()
+        self.foco = i % len(CAMPOS_GRADE)
+        self.monta()
+
+    def clica(self, i):
+        if i == self.foco and isinstance(self.valores[CAMPOS_GRADE[i][0]], bool):
+            self.marca()
+        else:
+            self.vai(i)
+
+    def marca(self):
+        chave = CAMPOS_GRADE[self.foco][0]
+        if isinstance(self.valores[chave], bool):
+            self.valores[chave] = not self.valores[chave]
+            self.monta()
+
+    def grava(self):
+        self.fecha_numero()
+        v = self.valores
+        # grade de 0 seria um laco sem fim no desenho; velocidade 0 prende o mouse
+        for k in ('x', 'y'):
+            v[k] = min(max(v[k], 1.0), 4096.0)
+        for k in ('x_speed', 'y_speed'):
+            v[k] = min(max(v[k], 0.1), 10.0)
+        grade['cfg'] = dict(v)
+        aplica_grade()
+        self.destroy()
+
+    def tecla(self, _w, ev):
+        k, shift = ev.keyval, bool(ev.state & Gdk.ModifierType.SHIFT_MASK)
+        chave = CAMPOS_GRADE[self.foco][0]
+        numerico = not isinstance(self.valores[chave], bool)
+        if k == Gdk.KEY_Escape:
+            self.destroy() if shift else self.grava()
+        elif k in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            self.grava()
+        elif k in (Gdk.KEY_Up, Gdk.KEY_ISO_Left_Tab) or (k == Gdk.KEY_Tab and shift):
+            self.vai(self.foco - 1)
+        elif k in (Gdk.KEY_Down, Gdk.KEY_Tab):
+            self.vai(self.foco + 1)
+        elif k == Gdk.KEY_space and not numerico:
+            self.marca()
+        elif numerico and k == Gdk.KEY_BackSpace:
+            texto = self.editando if self.editando is not None else '%.3f' % self.valores[chave]
+            self.editando = texto[:-1]
+            self.monta()
+        elif numerico and chr(Gdk.keyval_to_unicode(k) or 1) in '0123456789.-':
+            self.editando = (self.editando or '') + chr(Gdk.keyval_to_unicode(k))
+            self.monta()
+        return True
 
 def biblia():
     # +292: comeca no Velho Testamento, depois do cabecalho do Project Gutenberg.
@@ -491,6 +676,7 @@ def main():
         ('Delete', C_A): sair, ('w', x11.SUPER): fecha_foco, ('l', C_A): bloqueia,
         ('F1', x11.SUPER): ajuda,
         ('z', C_A): ctrl_alt_z, ('z', C_A | x11.SHIFT): diminui_zoom,
+        ('g', C_A): ctrl_alt_g, ('g', C_A | x11.SHIFT): desliga_grade,
     }
     for (ks, mods), cmd in le_programas().items():
         ao_apertar[(ks, mods)] = lambda cmd=cmd: roda(cmd)
@@ -526,9 +712,9 @@ def main():
                 if ev.type == x11.KEYPRESS:
                     win['sozinho'] = False
                 mods = k.state & RELEVANTES
-                if (ev.type == x11.KEYPRESS and k.keycode == lupa['ctrl_shift_z']
+                if (ev.type == x11.KEYPRESS and k.keycode in SINCRONAS
                         and mods == x11.CTRL | x11.SHIFT):
-                    ctrl_shift_z(k.time)
+                    SINCRONAS[k.keycode](k.time)
                     continue
                 fn = por_tecla.get((ev.type, k.keycode, mods))
                 if fn:
